@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+
 class Pose:
 	def __init__(self, name):
 		self.name = name
@@ -14,7 +17,9 @@ Poses = {}
 #Convert 9999 to Nan, or None
 #Convert it into a data frame, which is the return value
 def preprocess(filename):
-	return
+	train = pd.read_csv(filename, header = None)
+	train.iloc[:,1:] = train.iloc[:,1:].where(train.iloc[:,1:] < 9000, np.nan)
+	return train
 
 #Training
 #Groupby each class name
