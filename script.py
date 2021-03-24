@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from math import log
 
 class Pose:
 	def __init__(self, name):
@@ -8,9 +9,9 @@ class Pose:
 		self.likelihoods = []
 		
 class Likelihood:
-	def __init__(self, mean, variance):
+	def __init__(self, mean, stdev):
 		self.mean = mean
-		self.variance = variance
+		self.stdev = stdev
 
 Poses = {}
 
@@ -31,8 +32,11 @@ def train():
 	return
 
 #Create a function that takes a mean, variance and x values and returns the log density
-def pdf(x):
-	return density
+def pdf(likelihood, x):
+		mean = likelihood.mean
+		stdev = likelihood.stdev
+		relative_sum = log(1/stdev) + (-1/2)(((x-mean)/stdev)^2)
+	return relative_sum
 
 
 #Prediction takes a test dataset and return all predited class labels
