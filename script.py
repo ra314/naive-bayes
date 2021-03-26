@@ -15,11 +15,17 @@ class Likelihood:
 
 Poses = {}
 
+#The function below shows that the highest non 9999 value in the datagrame is 1849
+def sort_entire_df(df):
+	all = df.stack().tolist()
+	all = [item for item in all if not isinstance(item, str)]
+	return sorted(all)
+
 #Convert 9999 to Nan, or None
 #Convert it into a data frame, which is the return value
 def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
-	train.iloc[:,1:] = train.iloc[:,1:].where(train.iloc[:,1:] < 9000, np.nan)
+	train.replace(9999, pd.NA, inplace = True)
 	return train
 
 #Training
