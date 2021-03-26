@@ -8,10 +8,16 @@ class Pose:
 		self.prior = None
 		self.likelihoods = []
 		
+	def __str__(self):
+		printf("Name: {name}, Prior: {prior}")
+		
 class Likelihood:
 	def __init__(self, mean, stdev):
 		self.mean = mean
 		self.stdev = stdev
+		
+	def __str__(self):
+		print(f"Mean: {mean}, Standard Deviation: {stdev}")
 
 Poses = {}
 
