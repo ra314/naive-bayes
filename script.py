@@ -19,8 +19,6 @@ class Likelihood:
 	def __str__(self):
 		return f"Mean: {self.mean}, Standard Deviation: {self.stdev}"
 
-Poses = {}
-
 #The function below shows that the highest non 9999 value in the datagrame is 1849
 def sort_entire_df(df):
 	all = df.stack().tolist()
