@@ -2,16 +2,26 @@ import pandas as pd
 import numpy as np
 from math import log
 
+#Create a function that takes a mean, variance and x values and returns the log density
+def pdf(likelihood, x):
+	mean = likelihood.mean
+	stdev = likelihood.stdev
+	relative_sum = log(1/stdev) + (-1/2)*(((x-mean)/stdev)^2)
+	return relative_sum
+
 class Pose:
 	def __init__(self, name):
 		self.name = name
 		self.prior = None
-		self.likelihoods = []
+		self.normals = []
 		
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}"
 		
-class Likelihood:
+	def calculate_likelihood(values):
+		return values
+		
+class Normal:
 	def __init__(self, mean, stdev):
 		self.mean = mean
 		self.stdev = stdev
@@ -33,12 +43,12 @@ def preprocess(filename):
 	return train
 
 #Calculate priors and likelihoods for a give class of data
-def calculate_model_info(group, num_samples):
+def calculate_model_info(group, num_instances):
 	print(group[0].iloc[0])
 	pose = Pose(group[0].iloc[0])
-	pose.prior = len(group[1])/num_samples
+	pose.prior = len(group[1])/num_instances
 	for mean, stdev in zip(group.mean(), group.std()):
-		pose.likelihoods.append(Likelihood(mean, stdev))
+		pose.normals.append(Normal(mean, stdev))
 	return pose
 
 #Training
@@ -49,16 +59,8 @@ def calculate_model_info(group, num_samples):
 #Return or modify a dictionary poses
 def train(data):
 	groups = data.groupby([0])
-	poses = groups.apply(calculate_model_info, num_samples=len(data))
+	poses = groups.apply(calculate_model_info, num_instances=len(data))
 	return poses
-
-#Create a function that takes a mean, variance and x values and returns the log density
-def pdf(likelihood, x):
-	mean = likelihood.mean
-	stdev = likelihood.stdev
-	relative_sum = log(1/stdev) + (-1/2)*(((x-mean)/stdev)^2)
-	return relative_sum
-
 
 #Prediction takes a test dataset and return all predited class labels
 #It calls the predict_instance function and applies using df.apply
