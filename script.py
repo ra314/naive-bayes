@@ -9,7 +9,7 @@ class Pose:
 		self.likelihoods = []
 		
 	def __str__(self):
-		printf("Name: {name}, Prior: {prior}")
+		return f"Name: {self.name}, Prior: {self.prior}"
 		
 class Likelihood:
 	def __init__(self, mean, stdev):
@@ -17,7 +17,7 @@ class Likelihood:
 		self.stdev = stdev
 		
 	def __str__(self):
-		print(f"Mean: {mean}, Standard Deviation: {stdev}")
+		return f"Mean: {self.mean}, Standard Deviation: {self.stdev}"
 
 Poses = {}
 
@@ -35,10 +35,11 @@ def preprocess(filename):
 	return train
 
 #Calculate priors and likelihoods for a give class of data
-def calculate_model_info(group):
-	pose = Pose(group[0])
+def calculate_model_info(group, num_samples):
+	print(group[0].iloc[0])
+	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_samples
-	for mean, stdev in zip(group[1].mean(), group[1].std()):
+	for mean, stdev in zip(group.mean(), group.std()):
 		pose.likelihoods.append(Likelihood(mean, stdev))
 	return pose
 
@@ -50,7 +51,7 @@ def calculate_model_info(group):
 #Return or modify a dictionary poses
 def train(data):
 	groups = data.groupby([0])
-	poses = groups.apply(calculate_model_info(len(data)))
+	poses = groups.apply(calculate_model_info, num_samples=len(data))
 	return poses
 
 #Create a function that takes a mean, variance and x values and returns the log density
@@ -72,3 +73,8 @@ def predict():
 #Returns a percentage accuracy score
 def evaluate():
 	return
+
+'''
+data = preprocess('train.csv')
+poses = train(data)
+'''
