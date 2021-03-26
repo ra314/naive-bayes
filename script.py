@@ -33,9 +33,9 @@ def train():
 
 #Create a function that takes a mean, variance and x values and returns the log density
 def pdf(likelihood, x):
-		mean = likelihood.mean
-		stdev = likelihood.stdev
-		relative_sum = log(1/stdev) + (-1/2)(((x-mean)/stdev)^2)
+	mean = likelihood.mean
+	stdev = likelihood.stdev
+	relative_sum = log(1/stdev) + (-1/2)*(((x-mean)/stdev)^2)
 	return relative_sum
 
 
