@@ -28,14 +28,24 @@ def preprocess(filename):
 	train.replace(9999, pd.NA, inplace = True)
 	return train
 
+#Calculate priors and likelihoods for a give class of data
+def calculate_model_info(group):
+	pose = Pose(group[0])
+	pose.prior = len(group[1])/num_samples
+	for mean, stdev in zip(group[1].mean(), group[1].std()):
+		pose.likelihoods.append(Likelihood(mean, stdev))
+	return pose
+
 #Training
 #Groupby each class name
 #Calcaulte the mean and variance through pandas
 #Assign mean and variance to each attribute of each class
 #Calcaulte the priors, by the size of groupby / total instance
 #Return or modify a dictionary poses
-def train():
-	return
+def train(data):
+	groups = data.groupby([0])
+	poses = groups.apply(calculate_model_info(len(data)))
+	return poses
 
 #Create a function that takes a mean, variance and x values and returns the log density
 def pdf(likelihood, x):
