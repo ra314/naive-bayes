@@ -82,8 +82,8 @@ def predict(data, poses):
 #Returns a percentage accuracy score
 #Assumes labels are in first column of each dataframe
 def evaluate(predictions, test):
-	correct = sum(predictions[0]==test[0])
-	return 100*correct/len(predictions[0])
+	correct = sum(predictions==test[0])
+	return 100*correct/len(predictions)
 
 '''
 data = preprocess('train.csv')
@@ -91,4 +91,5 @@ poses = train(data)
 instance = data.iloc[6]
 poses['bridge'].calculate_likelihood(list(instance[1:]))
 predictions = predict(data, poses)
+evaluate(predictions, data)
 '''
