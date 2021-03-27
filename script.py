@@ -3,10 +3,11 @@ import numpy as np
 from math import log
 
 #Create a function that takes a mean, variance and x values and returns the log density
+#Removed (sqrt(2*pi)) from the calcuation since it's a constant
 def pdf(normal, x):
 	mean = normal.mean
 	stdev = normal.stdev
-	relative_sum = log(1/stdev) + (-1/2)*(((x-mean)/stdev)**2)
+	relative_sum = - log(stdev) - (1/2)*(((x-mean)/stdev)**2)
 	return relative_sum
 
 class Pose:
