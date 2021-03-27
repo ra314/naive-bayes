@@ -19,10 +19,10 @@ class Pose:
 		return f"Name: {self.name}, Prior: {self.prior}"
 		
 	def calculate_likelihood(self, instance):
-		likelihood = 1
+		likelihood = 0
 		for normal, value in zip(self.normals, instance):
 			if not(np.isnan(value)):
-				likelihood *= pdf(normal, value)
+				likelihood += pdf(normal, value)
 		return likelihood
 		
 class Normal:
