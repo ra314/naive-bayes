@@ -18,9 +18,9 @@ class Pose:
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}"
 		
-	def calculate_likelihood(self, values):
+	def calculate_likelihood(self, instance):
 		likelihood = 1
-		for normal, value in zip(self.normals, values):
+		for normal, value in zip(self.normals, instance):
 			if not(np.isnan(value)):
 				likelihood *= pdf(normal, value)
 		return likelihood
@@ -48,7 +48,6 @@ def preprocess(filename):
 
 #Calculate priors and likelihoods for a give class of data
 def calculate_model_info(group, num_instances):
-	print(group[0].iloc[0])
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_instances
 	for mean, stdev in zip(group.mean(), group.std()):
