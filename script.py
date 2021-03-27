@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from math import log
 
-#Create a function that takes a mean, variance and x values and returns the log density
+#Takes a mean, variance and x value and returns the log of the density
 #Removed (sqrt(2*pi)) from the calcuation since it's a constant
 def pdf(normal, x):
 	mean = normal.mean
@@ -10,6 +10,8 @@ def pdf(normal, x):
 	relative_sum = - log(stdev) - (1/2)*(((x-mean)/stdev)**2)
 	return relative_sum
 
+#Class the holds priors for each pose
+#Also holds the normal distributions for each attribute
 class Pose:
 	def __init__(self, name):
 		self.name = name
@@ -25,7 +27,8 @@ class Pose:
 			if not(np.isnan(value)):
 				likelihood += pdf(normal, value)
 		return likelihood
-		
+
+#Class that decribes a normal distribution with a certain mean and standard deviation	
 class Normal:
 	def __init__(self, mean, stdev):
 		self.mean = mean
@@ -34,20 +37,14 @@ class Normal:
 	def __str__(self):
 		return f"Mean: {self.mean}, Standard Deviation: {self.stdev}"
 
-#The function below shows that the highest non 9999 value in the datagrame is 1849
-def sort_entire_df(df):
-	all = df.stack().tolist()
-	all = [item for item in all if not isinstance(item, str)]
-	return sorted(all)
-
-#Convert 9999 to Nan, or None
-#Convert it into a data frame, which is the return value
+#Preprocessing: converts 9999 to np.NaN
 def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
 	train.replace(9999, np.NaN, inplace = True)
 	return train
 
-#Calculate priors and likelihoods for a give class of data
+#Calculate priors and attribute distributions for a given dataframe
+#This dataframe should only hold data for a single class
 def calculate_model_info(group, num_instances):
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_instances
@@ -55,33 +52,25 @@ def calculate_model_info(group, num_instances):
 		pose.normals.append(Normal(mean, stdev))
 	return pose
 
-
-#Training
-#Groupby each class name
-#Calculate the mean and variance through pandas
-#Assign mean and variance to each attribute of each class
-#Calcaulte the priors, by the size of groupby / total instance
-#Return or modify a dictionary poses
+#Training: Determining priors and attribute distributions for every class
+#Returns a pandas series that contains pose objects for every pose
+#Each object contains priors and attribute distributions
 def train(data):
 	groups = data.groupby([0])
 	poses = groups.apply(calculate_model_info, num_instances=len(data))
 	return poses
-	
+
+#Returns the name of the most likely post for any given instance
 def predict_instance(instance, poses):
 	likelihoods = [pose.calculate_likelihood(instance[1:]) for pose in poses]
 	return poses[np.argmax(likelihoods)].name
 
-#Prediction takes a test dataset and return all predited class labels
-#It calls the predict_instance function and applies using df.apply
-#Computes that log probability for each class according to the formula on page 3 of the spec.
-#Pick the class with the highest probability
+#Predicts the class labels for a dataframe
 def predict(data, poses):
 	predictions = data.apply(predict_instance, poses = poses, axis = 1)
 	return predictions
 
-#Takes a test data set, uses predict function to get all the predicted classes
-#Returns a percentage accuracy score
-#Assumes labels are in first column of each dataframe
+#Calculate accuracy of predictions
 def evaluate(predictions, test):
 	correct = sum(predictions==test[0])
 	return 100*correct/len(predictions)
