@@ -55,9 +55,10 @@ def calculate_model_info(group, num_instances):
 		pose.normals.append(Normal(mean, stdev))
 	return pose
 
+
 #Training
 #Groupby each class name
-#Calcaulte the mean and variance through pandas
+#Calculate the mean and variance through pandas
 #Assign mean and variance to each attribute of each class
 #Calcaulte the priors, by the size of groupby / total instance
 #Return or modify a dictionary poses
@@ -80,8 +81,10 @@ def predict(data, poses):
 
 #Takes a test data set, uses predict function to get all the predicted classes
 #Returns a percentage accuracy score
-def evaluate():
-	return
+#Assumes labels are in first column of each dataframe
+def evaluate(predictions, test):
+	correct = sum(predictions[0]==test[0])
+	return 100*correct/len(predictions[0])
 
 '''
 data = preprocess('train.csv')
