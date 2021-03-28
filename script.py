@@ -32,7 +32,7 @@ class Pose:
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}"
 		
-	def calculate_likelihood(self, instance, mode):
+	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = 0
 		if mode == "classic":
 			for normal, attribute in zip(self.normals, instance):
@@ -40,12 +40,13 @@ class Pose:
 					likelihood += pdf(normal, attribute, "log")
 					
 		if mode == "KDE":
+			bandwidth = parameters[0]
 			for attribute, column_index in zip(instance, data.iloc[:,1:]):
 				if not(np.isnan(attribute)):
 					total_pdf = 0
 					for value in self.data[column_index]:
 						if not(np.isnan(value)):
-							total_pdf += pdf(Normal(value, 1), attribute, "classic")
+							total_pdf += pdf(Normal(value, bandwidth), attribute, "classic")
 					likelihood += log_0(total_pdf/len(data))
 
 		return likelihood
@@ -86,13 +87,13 @@ def train(data, mode):
 	return poses
 
 #Returns the name of the most likely post for any given instance
-def predict_instance(instance, poses, mode):
-	likelihoods = [pose.calculate_likelihood(instance[1:], mode) for pose in poses]
+def predict_instance(instance, poses, mode, parameters):
+	likelihoods = [pose.calculate_likelihood(instance[1:], mode, parameters) for pose in poses]
 	return poses[np.argmax(likelihoods)].name
 
 #Predicts the class labels for a dataframe
-def predict(data, poses, mode):
-	predictions = data.apply(predict_instance, poses = poses, mode = mode, axis = 1)
+def predict(data, poses, mode, parameters):
+	predictions = data.apply(predict_instance, poses = poses, mode = mode, parameters = parameters, axis = 1)
 	return predictions
 
 #Calculate accuracy of predictions
@@ -104,7 +105,7 @@ def evaluate(predictions, test):
 data = preprocess('train.csv')
 poses = train(data, "KDE")
 instance = data.iloc[6]
-poses['bridge'].calculate_likelihood(list(instance[1:]), "KDE")
-predictions = predict(data, poses, "KDE")
+poses['bridge'].calculate_likelihood(list(instance[1:]), "KDE", [3])
+predictions = predict(data, poses, "KDE", [3])
 evaluate(predictions, data)
 '''
