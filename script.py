@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import log, pi, sqrt, exp
+from multiprocessing import Pool
 
 #Takes log, but returns 0, if the value is 0
 def log_0(x):
@@ -88,12 +89,15 @@ def train(data, mode):
 
 #Returns the name of the most likely post for any given instance
 def predict_instance(instance, poses, mode, parameters):
+	instance = instance[1]
 	likelihoods = [pose.calculate_likelihood(instance[1:], mode, parameters) for pose in poses]
 	return poses[np.argmax(likelihoods)].name
 
 #Predicts the class labels for a dataframe
 def predict(data, poses, mode, parameters):
-	predictions = data.apply(predict_instance, poses = poses, mode = mode, parameters = parameters, axis = 1)
+	pool_input = zip(data.iterrows(), [poses]*len(data), [mode]*len(data), [parameters]*len(data))
+	with Pool(8) as pool:
+		predictions = pool.starmap(predict_instance, pool_input)
 	return predictions
 
 #Calculate accuracy of predictions
@@ -107,5 +111,16 @@ poses = train(data, "KDE")
 instance = data.iloc[6]
 poses['bridge'].calculate_likelihood(list(instance[1:]), "KDE", [3])
 predictions = predict(data, poses, "KDE", [3])
+evaluate(predictions, data)
+
+testing
+
+import time
+test = preprocess('test.csv')
+data = preprocess('train.csv')
+poses = train(data, "KDE")
+start = time.time()
+predictions = predict(data, poses, "KDE", [3])
+print(time.time()-start)
 evaluate(predictions, data)
 '''
