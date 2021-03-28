@@ -52,10 +52,9 @@ class Pose:
 
 		if mode == "mean_imputation":
 			for normal, attribute in zip(self.normals, instance):
-				if not(np.isnan(attribute)):
-					likelihood += pdf(normal, attribute, "log")
-				else:
-					likelihood += pdf(normal, normal[0], "log")
+				if np.isnan(attribute):
+					attribute = normal.mean
+				likelihood += pdf(normal, attribute, "log")
 
 		return likelihood
 
@@ -114,10 +113,10 @@ def evaluate(predictions, test):
 
 '''
 data = preprocess('train.csv')
-poses = train(data, "KDE")
+poses = train(data, "classic")
 instance = data.iloc[6]
-poses['bridge'].calculate_likelihood(list(instance[1:]), "KDE", [3])
-predictions = predict(data, poses, "KDE", [3])
+poses['bridge'].calculate_likelihood(list(instance[1:]), "classic", [3])
+predictions = predict(data, poses, "mean_imputation", [3])
 evaluate(predictions, data)
 
 testing
