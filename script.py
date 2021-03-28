@@ -50,6 +50,13 @@ class Pose:
 							total_pdf += pdf(Normal(value, bandwidth), attribute, "classic")
 					likelihood += log_0(total_pdf/len(data))
 
+		if mode == "mean_imputation":
+			for normal, attribute in zip(self.normals, instance):
+				if not(np.isnan(attribute)):
+					likelihood += pdf(normal, attribute, "log")
+				else:
+					likelihood += pdf(normal, normal[0], "log")
+
 		return likelihood
 
 #Class that decribes a normal distribution with a certain mean and standard deviation	
