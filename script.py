@@ -63,7 +63,7 @@ class Pose:
 					likelihood += pdf(normal, attribute, "log")
 					likelihood += log_0(1-absence_prob)
 				else:
-					likelihood += log_0(1-absence_prob)
+					likelihood += log_0(absence_prob)
 
 		return likelihood
 
