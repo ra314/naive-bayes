@@ -58,13 +58,12 @@ class Pose:
 				likelihood += pdf(normal, attribute, "log")
 
 		if mode == "absence_variable":
-			for normal, attribute, absprob in zip(self.normals, instance, self.absence_probs):
+			for normal, absence_prob, attribute in zip(self.normals, self.absence_probs, instance):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
+					likelihood += log_0(1-absence_prob)
 				else:
-					#print(f"Prior for {self.name}: {self.prior}. Abs = {absprob}. Attr = {attribute}")
-					likelihood += log_0(self.prior*absprob)
-
+					likelihood += log_0(1-absence_prob)
 
 		return likelihood
 
@@ -89,15 +88,12 @@ def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_instances
 	if (mode == "classic"):
-		for mean, stdev in zip(group.mean(), group.std()):
-			pose.normals.append(Normal(mean, stdev))
+		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 	if (mode == "KDE"):
 		pose.data = data.loc[data[0] == pose.name]
 	if (mode == "absence_variable"):
-		for attribute in group.iloc[:, 1:]:
-			nanprob = 1 - (group[attribute].count())/len(group[attribute])
-			pose.absence_probs.append(nanprob)
-			pose.normals.append(Normal(group[attribute].mean(), group[attribute].std()))
+		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
+		pose.absence_probs = (len(group) - group.count())/len(group)
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
