@@ -95,38 +95,25 @@ def train(data, mode):
 
 #Returns the name of the most likely post for any given instance
 def predict_instance(instance, poses, mode, parameters):
-	instance = instance[1]
+	#Accounts for unpacking iterrows vs df.apply
+	if len(instance) == 2:
+		instance = instance[1]
 	likelihoods = [pose.calculate_likelihood(instance[1:], mode, parameters) for pose in poses]
 	return poses[np.argmax(likelihoods)].name
 
 #Predicts the class labels for a dataframe
-def predict(data, poses, mode, parameters):
-	pool_input = zip(data.iterrows(), [poses]*len(data), [mode]*len(data), [parameters]*len(data))
-	with Pool(8) as pool:
-		predictions = pool.starmap(predict_instance, pool_input)
+#Set speedup to true to use multiprocessing, false to use df.apply
+#Multiprocessing will not work on windows or jupyter environments.
+def predict(data, poses, mode, parameters, speedup):
+	if speedup:
+		pool_input = zip(data.iterrows(), [poses]*len(data), [mode]*len(data), [parameters]*len(data))
+		with Pool(8) as pool:
+			predictions = pool.starmap(predict_instance, pool_input)
+	else:
+		predictions = data.apply(predict_instance, poses = poses, mode = mode, parameters = parameters, axis = 1)
 	return predictions
 
 #Calculate accuracy of predictions
 def evaluate(predictions, test):
 	correct = sum(predictions==test[0])
 	return 100*correct/len(predictions)
-
-'''
-data = preprocess('train.csv')
-poses = train(data, "classic")
-instance = data.iloc[6]
-poses['bridge'].calculate_likelihood(list(instance[1:]), "classic", [3])
-predictions = predict(data, poses, "mean_imputation", [3])
-evaluate(predictions, data)
-
-testing
-
-import time
-test = preprocess('test.csv')
-data = preprocess('train.csv')
-poses = train(data, "KDE")
-start = time.time()
-predictions = predict(data, poses, "KDE", [3])
-print(time.time()-start)
-evaluate(predictions, data)
-'''
