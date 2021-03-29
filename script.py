@@ -28,10 +28,11 @@ class Pose:
 		self.name = name
 		self.prior = None
 		self.normals = []
+		self.absence_probs = []
 		self.data = None
 		
 	def __str__(self):
-		return f"Name: {self.name}, Prior: {self.prior}"
+		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = 0
@@ -55,6 +56,15 @@ class Pose:
 				if np.isnan(attribute):
 					attribute = normal.mean
 				likelihood += pdf(normal, attribute, "log")
+
+		if mode == "absence_variable":
+			for normal, attribute, absprob in zip(self.normals, instance, self.absence_probs):
+				if not(np.isnan(attribute)):
+					likelihood += pdf(normal, attribute, "log")
+				else:
+					#print(f"Prior for {self.name}: {self.prior}. Abs = {absprob}. Attr = {attribute}")
+					likelihood += log_0(self.prior*absprob)
+
 
 		return likelihood
 
@@ -83,6 +93,11 @@ def calculate_model_info(group, num_instances, mode):
 			pose.normals.append(Normal(mean, stdev))
 	if (mode == "KDE"):
 		pose.data = data.loc[data[0] == pose.name]
+	if (mode == "absence_variable"):
+		for attribute in group.iloc[:, 1:]:
+			nanprob = 1 - (group[attribute].count())/len(group[attribute])
+			pose.absence_probs.append(nanprob)
+			pose.normals.append(Normal(group[attribute].mean(), group[attribute].std()))
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
