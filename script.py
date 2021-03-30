@@ -131,7 +131,7 @@ def evaluate(predictions, test):
 	
 #Random hold out
 def random_hold_out(data, hold_out_percent, mode, parameters):
-	train_data = data.sample(frac = hold_out_percent)
+	train_data = data.sample(frac = hold_out_percent, random_state = 3)
 	test_data = data.drop(train_data.index)
 	poses = train(train_data, mode)
 	predictions = predict(test_data, poses, mode, parameters, True)
