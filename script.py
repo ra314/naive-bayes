@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from math import log, pi, sqrt, exp
-from statistics import mean, stdev
 from multiprocessing import Pool
 
 #Takes log, but returns 0, if the value is 0
@@ -37,8 +36,13 @@ class Pose:
 		
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = log_0(self.prior)
-		if mode == "classic" or mode == "box_and_closest":
+		if mode == "classic":
 			for normal, attribute in zip(self.normals, instance):
+				if not(np.isnan(attribute)):
+					likelihood += pdf(normal, attribute, "log")
+		
+		if mode == "box_and_closest":
+			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
 					
@@ -82,6 +86,10 @@ def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
 	train.replace(9999, np.NaN, inplace = True)
 	return train
+	
+#Calcualte the height and width of the pose
+def calculate_height_and_width(instance):
+	return [max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])]
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
@@ -96,10 +104,8 @@ def calculate_model_info(group, num_instances, mode):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 		pose.absence_probs = (len(group) - group.count())/len(group)
 	if (mode == "box_and_closest"):
-		xdf = group.iloc[:, 1:12].T
-		ydf = group.iloc[:, 12:].T
-		maxmins = [xdf.max(), xdf.min(), ydf.max(), ydf.min()]
-		pose.normals = [Normal(mean(item), item.std()) for item in maxmins]
+		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
+		pose.normals = [Normal(mean, stdev) for mean, stdev in zip(widths_and_heights.mean(), widths_and_heights.std())]
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
