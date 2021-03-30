@@ -35,7 +35,7 @@ class Pose:
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
 	def calculate_likelihood(self, instance, mode, parameters):
-		likelihood = 0
+		likelihood = log_0(self.prior)
 		if mode == "classic":
 			for normal, attribute in zip(self.normals, instance):
 				if not(np.isnan(attribute)):
