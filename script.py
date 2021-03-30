@@ -29,6 +29,7 @@ class Pose:
 		self.prior = None
 		self.normals = []
 		self.absence_probs = []
+		self.closest_point_probs = []
 		self.data = None
 		
 	def __str__(self):
@@ -87,9 +88,17 @@ def preprocess(filename):
 	train.replace(9999, np.NaN, inplace = True)
 	return train
 	
-#Calcualte the height and width of the pose
+#Calculate the height and width of the pose
 def calculate_height_and_width(instance):
 	return [max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])]
+	
+#Calculates distance between two points
+def calculate_distance(x1, y1, x2, y2):
+	pass
+	
+#Take an instance and return a list containing the closest point to every point, that is not nan
+def calculate_closest_points(instance):
+	pass
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
@@ -106,6 +115,10 @@ def calculate_model_info(group, num_instances, mode):
 	if (mode == "box_and_closest"):
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
 		pose.normals = [Normal(mean, stdev) for mean, stdev in zip(widths_and_heights.mean(), widths_and_heights.std())]
+		#Create a dataframe that has 11 columns, populated with the index of the closest points
+		#This should be done with iterrows, list comprehsnsion and converting to a dataframe like line 116
+		#On each row apply the calcualte_closest_points(row) to get the closest points
+		#With this data frame, get the probability of each point being the closest point and store this in pose.closest_point_probs
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
