@@ -138,5 +138,16 @@ def random_hold_out(data, hold_out_percent, mode, parameters):
 	print(evaluate(predictions, test_data))
 	
 #Cross validation
-#def cross_validation(data, 
+def cross_validation(data, num_partitions, mode, parameters):
+	indexes = np.array(data.index)
+	np.random.seed(3)
+	np.random.shuffle(indexes)
+	accuracy = 0
+	for test_set_indexes in np.array_split(indexes, num_partitions):
+		test_data = data.loc[test_set_indexes]
+		train_data = data.drop(test_data.index)
+		poses = train(train_data, mode)
+		predictions = predict(test_data, poses, mode, parameters, True)
+		accuracy += evaluate(predictions, test_data)
+	return accuracy/num_partitions
 	
