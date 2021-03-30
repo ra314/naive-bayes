@@ -90,7 +90,7 @@ def calculate_model_info(group, num_instances, mode):
 	if (mode == "classic" or mode == "mean_imputation"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 	if (mode == "KDE"):
-		pose.data = data.loc[data[0] == pose.name]
+		pose.data = group.copy()
 	if (mode == "absence_variable"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 		pose.absence_probs = (len(group) - group.count())/len(group)
@@ -136,4 +136,7 @@ def random_hold_out(data, hold_out_percent, mode, parameters):
 	poses = train(train_data, mode)
 	predictions = predict(test_data, poses, mode, parameters, True)
 	print(evaluate(predictions, test_data))
+	
+#Cross validation
+#def cross_validation(data, 
 	
