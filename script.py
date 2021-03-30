@@ -36,7 +36,7 @@ class Pose:
 		
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = log_0(self.prior)
-		if mode == "classic":
+		if mode == "classic" or mode == "bos-closest":
 			for normal, attribute in zip(self.normals, instance):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
@@ -94,6 +94,11 @@ def calculate_model_info(group, num_instances, mode):
 	if (mode == "absence_variable"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 		pose.absence_probs = (len(group) - group.count())/len(group)
+	if (mode == "box_and_closest"):
+		xdf = group.iloc[:, 1:12].T
+		ydf = group.iloc[:, 12:].T
+		maxmins = [xdf.max(), xdf.min(), ydf.max(), ydf.min()]
+		pose.normals = [Normal(mean(item), item.std() for item in maxmins]
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
