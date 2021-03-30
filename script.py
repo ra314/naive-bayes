@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import log, pi, sqrt, exp
+from statistics import mean, stdev
 from multiprocessing import Pool
 
 #Takes log, but returns 0, if the value is 0
@@ -36,7 +37,7 @@ class Pose:
 		
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = log_0(self.prior)
-		if mode == "classic" or mode == "bos-closest":
+		if mode == "classic" or mode == "box_and_closest":
 			for normal, attribute in zip(self.normals, instance):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
@@ -98,7 +99,7 @@ def calculate_model_info(group, num_instances, mode):
 		xdf = group.iloc[:, 1:12].T
 		ydf = group.iloc[:, 12:].T
 		maxmins = [xdf.max(), xdf.min(), ydf.max(), ydf.min()]
-		pose.normals = [Normal(mean(item), item.std() for item in maxmins]
+		pose.normals = [Normal(mean(item), item.std()) for item in maxmins]
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
