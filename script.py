@@ -87,7 +87,7 @@ def preprocess(filename):
 def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_instances
-	if (mode == "classic"):
+	if (mode == "classic" or mode == "mean_imputation"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 	if (mode == "KDE"):
 		pose.data = data.loc[data[0] == pose.name]
@@ -128,3 +128,12 @@ def predict(data, poses, mode, parameters, speedup):
 def evaluate(predictions, test):
 	correct = sum(predictions==test[0])
 	return 100*correct/len(predictions)
+	
+#Random hold out
+def random_hold_out(data, hold_out_percent, mode, parameters):
+	train_data = data.sample(frac = hold_out_percent)
+	test_data = data.drop(train_data.index)
+	poses = train(train_data, mode)
+	predictions = predict(test_data, poses, mode, parameters, True)
+	print(evaluate(predictions, test_data))
+	
