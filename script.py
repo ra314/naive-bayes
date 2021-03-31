@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from math import log, pi, sqrt, exp
 from multiprocessing import Pool
+import matplotlib.pyplot as plt
 
 #Class the holds priors for each pose
 #Also holds the normal distributions for each attribute
@@ -19,7 +20,7 @@ class Pose:
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
 	def calculate_likelihood(self, instance, mode, parameters):
-		likelihood = log_0(self.prior)
+		likelihood = 0 if self.prior == 0 else log(self.prior)
 		instance = pd.to_numeric(instance).to_numpy()
 		
 		if mode == "classic":
@@ -43,7 +44,6 @@ class Pose:
 			likelihoods[likelihoods == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), nan=0))
 			
-
 		if mode == "mean_imputation":
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
 			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
@@ -77,7 +77,7 @@ def calculate_height_and_width(instance):
 	
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
-	points = np.array(list(zip(instance[:11], instance[11:])))
+	points = np.dstack((instance[:11], instance[11:]))[0]
 	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates
@@ -173,3 +173,16 @@ def cross_validation(data, num_partitions, mode, parameters):
 		accuracy += evaluate(predictions, test_data)
 	return accuracy/num_partitions
 	
+#Graph for picking bandwidth parameter
+def maximise_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
+	accuracies = []
+	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
+	for bandwidth in bandwidths:
+		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth])
+		print(bandwidth, accuracy)
+		accuracies.append(accuracy)
+	
+	plt.plot(accuracies)
+	plt.show()
+	
+	return bandwidths[np.argmax(accuracies)]
