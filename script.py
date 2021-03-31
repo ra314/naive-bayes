@@ -95,13 +95,16 @@ def calculate_height_and_width(instance):
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
 	points = np.array(list(zip(instance[:11], instance[11:])))
+	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates
 	distances[np.where(distances == 0)] = np.nan
 	distances[np.where(np.isnan(distances))] = np.infty
-	closest_point_indexes = np.argmin(distances, axis = 0)
-	closest_point_distances = np.min(distances, axis = 0)
-	closest_point_indexes[np.where(closest_point_distances == np.infty)] = np.nan
+	closest_points = np.argmin(distances, axis = 0)
+	closest_points_distances = np.min(distances, axis = 0)
+	closest_points[np.where(closest_points_distances == np.infty)] = -1
+	return closest_points
+	
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
