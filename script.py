@@ -41,8 +41,7 @@ class Pose:
 		if mode == "classic":
 			instance = np.array(list(instance))
 			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihoods[np.where(np.isnan(likelihoods))] = 0
-			likelihood += np.sum(likelihoods)
+			likelihood += np.sum(np.nan_to_num(likelihoods))
 		
 		if mode == "box_and_closest":
 			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
@@ -55,20 +54,17 @@ class Pose:
 					
 		if mode == "KDE":
 			bandwidth = parameters[0]
-			for attribute, column_index in zip(instance, data.iloc[:,1:]):
-				if not(np.isnan(attribute)):
-					total_pdf = 0
-					for value in self.data[column_index]:
-						if not(np.isnan(value)):
-							total_pdf += pdf(Normal(value, bandwidth), attribute, "classic")
-					likelihood += log_0(total_pdf/len(data))
+			instance = np.array(list(instance))
+			likelihoods = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
+			likelihoods = np.sum(np.nan_to_num(likelihoods), axis = 0)
+			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), neginf=0))
+			
 
 		if mode == "mean_imputation":
 			instance = np.array(list(instance))
-			instance[np.where(np.isnan(instance))] = poses[0].means[np.where(np.isnan(instance))]
+			instance[np.isnan(instance)] = poses[0].means[np.isnan(instance)]
 			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihoods[np.where(np.isnan(likelihoods))] = 0
-			likelihood += np.sum(likelihoods)
+			likelihood += np.sum(np.nan_to_num(likelihoods))
 
 		if mode == "absence_variable":
 			for normal, absence_prob, attribute in zip(self.normals, self.absence_probs, instance):
@@ -96,11 +92,11 @@ def calculate_closest_points(instance):
 	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates
-	distances[np.where(distances == 0)] = np.nan
-	distances[np.where(np.isnan(distances))] = np.infty
+	distances[distances == 0] = np.nan
+	distances = np.nan_to_num(distances, nan=np.infty)
 	closest_points = np.argmin(distances, axis = 0)
 	closest_points_distances = np.min(distances, axis = 0)
-	closest_points[np.where(closest_points_distances == np.infty)] = -1
+	closest_points[closest_points_distances == np.infty] = -1
 	return closest_points
 
 #Calculate priors and attribute distributions for a given dataframe
@@ -112,7 +108,7 @@ def calculate_model_info(group, num_instances, mode):
 		pose.means = np.array(group.mean())
 		pose.stdevs = np.array(group.std())
 	if (mode == "KDE"):
-		pose.data = group
+		pose.data = group.iloc[:,1:].to_numpy()
 	if (mode == "absence_variable"):
 		pose.means = np.array(group.mean())
 		pose.stdevs = np.array(group.std())
