@@ -27,7 +27,8 @@ class Pose:
 	def __init__(self, name):
 		self.name = name
 		self.prior = None
-		self.normals = []
+		self.means = []
+		self.stdevs = []
 		self.absence_probs = []
 		self.closest_point_probs = []
 		self.data = None
@@ -39,9 +40,7 @@ class Pose:
 		likelihood = log_0(self.prior)
 		if mode == "classic":
 			instance = np.array(list(instance))
-			means = np.array([normal.mean for normal in self.normals])
-			stdevs = np.array([normal.stdev for normal in self.normals])
-			likelihoods = -np.log(stdevs*sqrt(2*pi))-0.5*(((instance-means)/stdevs)**2)
+			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
 			likelihoods[np.where(np.isnan(likelihoods))] = 0
 			likelihood += np.sum(likelihoods)
 		
@@ -80,15 +79,6 @@ class Pose:
 
 		return likelihood
 
-#Class that decribes a normal distribution with a certain mean and standard deviation	
-class Normal:
-	def __init__(self, mean, stdev):
-		self.mean = mean
-		self.stdev = stdev
-		
-	def __str__(self):
-		return f"Mean: {self.mean}, Standard Deviation: {self.stdev}"
-
 #Preprocessing: converts 9999 to np.NaN
 def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
@@ -118,11 +108,13 @@ def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group[1])/num_instances
 	if (mode == "classic" or mode == "mean_imputation"):
-		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
+		pose.means = np.array(group.mean())
+		pose.stdevs = np.array(group.std())
 	if (mode == "KDE"):
 		pose.data = group
 	if (mode == "absence_variable"):
-		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
+		pose.means = np.array(group.mean())
+		pose.stdevs = np.array(group.std())
 		pose.absence_probs = (len(group) - group.count())/len(group)
 	if (mode == "box_and_closest"):
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
