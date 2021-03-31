@@ -3,24 +3,6 @@ import numpy as np
 from math import log, pi, sqrt, exp
 from multiprocessing import Pool
 
-#Takes log, but returns 0, if the value is 0
-def log_0(x):
-	if x == 0:
-		return 0
-	else:
-		return log(x)
-
-#Takes a mean, variance and x value and returns the log of the density
-#Removed (sqrt(2*pi)) from the calcuation since it's a constant
-def pdf(normal, x, mode):
-	mean = normal.mean
-	stdev = normal.stdev
-	if mode == "classic":
-		density = (1/(stdev*sqrt(2*pi))) * exp((-1/2)*(((x-mean)/stdev)**2))
-	if mode == "log":
-		density = -log_0(stdev*sqrt(2*pi)) -(0.5)*(((x-mean)/stdev)**2)
-	return density
-
 #Class the holds priors for each pose
 #Also holds the normal distributions for each attribute
 class Pose:
@@ -41,13 +23,14 @@ class Pose:
 		instance = pd.to_numeric(instance).to_numpy()
 		
 		if mode == "classic":
-			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
+			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
 		
 		if mode == "box_and_closest":
-			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
-				if not(np.isnan(attribute)):
-					likelihood += pdf(normal, attribute, "log")
+			instance = calculate_height_and_width(instance)
+			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+
 			closest_points = calculate_closest_points(instance)
 			closest_points_indexes = np.where(closest_points != -1)
 			conditional_probs = self.closest_point_probs[closest_points_indexes, closest_points[closest_points_indexes]]
@@ -63,16 +46,19 @@ class Pose:
 
 		if mode == "mean_imputation":
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
-			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
+			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
 
 		if mode == "absence_variable":
-			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
+			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+			
 			coordinate_present = np.isnan(instance[11:])
+			
 			absence_probs = self.absence_probs[coordinate_present]
 			absence_probs[absence_probs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(absence_probs), nan=0))
+			
 			presence_probs = 1-self.absence_probs[np.logical_not(coordinate_present)]
 			presence_probs[presence_probs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(presence_probs), nan=0))
@@ -87,7 +73,7 @@ def preprocess(filename):
 	
 #Calculate the height and width of the pose
 def calculate_height_and_width(instance):
-	return [max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])]
+	return np.array(max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:]))
 	
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
@@ -113,7 +99,7 @@ def calculate_model_info(group, num_instances, mode):
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
 	if (mode == "KDE"):
-		pose.data = group.to_numeric
+		pose.data = group.to_numpy()
 	if (mode == "absence_variable"):
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
