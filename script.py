@@ -46,6 +46,10 @@ class Pose:
 			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
+			closest_points = calculate_closest_points(instance[1:])
+			closest_points_indexes = np.where(closest_points != -1)
+			conditional_probs = self.closest_point_probs[closest_points_indexes, closest_points[closest_points_indexes]]
+			likelihood += np.sum(np.log(conditional_probs))
 					
 		if mode == "KDE":
 			bandwidth = parameters[0]
@@ -104,7 +108,6 @@ def calculate_closest_points(instance):
 	closest_points_distances = np.min(distances, axis = 0)
 	closest_points[np.where(closest_points_distances == np.infty)] = -1
 	return closest_points
-	
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
