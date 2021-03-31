@@ -94,11 +94,23 @@ def calculate_height_and_width(instance):
 	
 #Calculates distance between two points
 def calculate_distance(x1, y1, x2, y2):
-	pass
+	return sqrt((x1 - x2)**2 + (y1 - y2)**2)
 	
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
-	pass
+	points = [[instance.iloc[0, i], instance.iloc[0, i+11]] for i in range(len(instance - 1)/2)]
+	neighbours = []
+	for i in range(len(points)):
+		closest = -1
+		mindist = np.inf
+		for j in range(len(points)):
+			if i != j:
+				dist = calculate_distance(points[i][0], points[i][1], points[j][0], points[j][1])
+				if dist < mindist:
+					mindist = dist
+					closest = j
+		neighbours.append(j)
+	#print(points)
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
@@ -115,6 +127,7 @@ def calculate_model_info(group, num_instances, mode):
 	if (mode == "box_and_closest"):
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
 		pose.normals = [Normal(mean, stdev) for mean, stdev in zip(widths_and_heights.mean(), widths_and_heights.std())]
+		calculate_closest_points(group)
 		#Create a dataframe that has 11 columns, populated with the index of the closest points
 		#This should be done with iterrows, list comprehsnsion and converting to a dataframe like line 116
 		#On each row apply the calcualte_closest_points(row) to get the closest points
