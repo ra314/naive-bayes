@@ -38,15 +38,18 @@ class Pose:
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = log_0(self.prior)
 		if mode == "classic":
-			for normal, attribute in zip(self.normals, instance):
-				if not(np.isnan(attribute)):
-					likelihood += pdf(normal, attribute, "log")
+			instance = np.array(list(instance))
+			means = np.array([normal.mean for normal in self.normals])
+			stdevs = np.array([normal.stdev for normal in self.normals])
+			likelihoods = -np.log(stdevs*sqrt(2*pi))-0.5*(((instance-means)/stdevs)**2)
+			likelihoods[np.where(np.isnan(likelihoods))] = 0
+			likelihood += np.sum(likelihoods)
 		
 		if mode == "box_and_closest":
 			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
 				if not(np.isnan(attribute)):
 					likelihood += pdf(normal, attribute, "log")
-			closest_points = calculate_closest_points(instance[1:])
+			closest_points = calculate_closest_points(instance)
 			closest_points_indexes = np.where(closest_points != -1)
 			conditional_probs = self.closest_point_probs[closest_points_indexes, closest_points[closest_points_indexes]]
 			likelihood += np.sum(np.log(conditional_probs))
