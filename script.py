@@ -63,7 +63,7 @@ class Pose:
 
 		if mode == "mean_imputation":
 			instance = np.array(list(instance))
-			instance[np.isnan(instance)] = poses[0].means[np.isnan(instance)]
+			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
 			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
 			likelihood += np.sum(np.nan_to_num(likelihoods))
 
@@ -116,7 +116,8 @@ def calculate_model_info(group, num_instances, mode):
 		pose.absence_probs = (len(group) - group.count())/len(group)
 	if (mode == "box_and_closest"):
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
-		pose.normals = [Normal(mean, stdev) for mean, stdev in zip(widths_and_heights.mean(), widths_and_heights.std())]
+		pose.means = widths_and_heights.mean()
+		pose.stdevs = widths_and_heights.std()
 		calculate_closest_points(group)
 		#Create a dataframe that has 11 columns, populated with the index of the closest points
 		#This should be done with iterrows, list comprehsnsion and converting to a dataframe like line 116
@@ -168,6 +169,8 @@ def random_hold_out(data, hold_out_percent, mode, parameters):
 	
 #Cross validation
 def cross_validation(data, num_partitions, mode, parameters):
+	if num_paritions == -1:
+		num_partitions = len(data)
 	indexes = np.array(data.index)
 	np.random.seed(3)
 	np.random.shuffle(indexes)
