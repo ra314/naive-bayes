@@ -92,25 +92,16 @@ def preprocess(filename):
 def calculate_height_and_width(instance):
 	return [max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])]
 	
-#Calculates distance between two points
-def calculate_distance(x1, y1, x2, y2):
-	return sqrt((x1 - x2)**2 + (y1 - y2)**2)
-	
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
-	points = [[instance.iloc[0, i], instance.iloc[0, i+11]] for i in range(len(instance - 1)/2)]
-	neighbours = []
-	for i in range(len(points)):
-		closest = -1
-		mindist = np.inf
-		for j in range(len(points)):
-			if i != j:
-				dist = calculate_distance(points[i][0], points[i][1], points[j][0], points[j][1])
-				if dist < mindist:
-					mindist = dist
-					closest = j
-		neighbours.append(j)
-	#print(points)
+	points = np.array(list(zip(instance[:11], instance[11:])))
+	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
+	#Assuming that no two body points share the same coordinates
+	distances[np.where(distances == 0)] = np.nan
+	distances[np.where(np.isnan(distances))] = np.infty
+	closest_point_indexes = np.argmin(distances, axis = 0)
+	closest_point_distances = np.min(distances, axis = 0)
+	closest_point_indexes[np.where(closest_point_distances == np.infty)] = np.nan
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
@@ -120,7 +111,7 @@ def calculate_model_info(group, num_instances, mode):
 	if (mode == "classic" or mode == "mean_imputation"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 	if (mode == "KDE"):
-		pose.data = group.copy()
+		pose.data = group
 	if (mode == "absence_variable"):
 		pose.normals= [Normal(mean, stdev) for mean, stdev in zip(group.mean(), group.std())]
 		pose.absence_probs = (len(group) - group.count())/len(group)
@@ -138,8 +129,9 @@ def calculate_model_info(group, num_instances, mode):
 #Returns a pandas series that contains pose objects for every pose
 #Each object contains priors and attribute distributions
 def train(data, mode):
-	groups = data.groupby([0])
-	poses = groups.apply(calculate_model_info, num_instances=len(data), mode = mode)
+	poses = [calculate_model_info(data.loc[group[1].index], len(data), mode) for group in data.groupby([0])]
+	#groups = data.groupby([0])
+	#poses = groups.apply(calculate_model_info, num_instances=len(data), mode = mode)
 	return poses
 
 #Returns the name of the most likely post for any given instance
