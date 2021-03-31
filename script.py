@@ -38,10 +38,11 @@ class Pose:
 		
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = log_0(self.prior)
+		instance = pd.to_numeric(instance).to_numpy()
+		
 		if mode == "classic":
-			instance = np.array(list(instance))
 			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(likelihoods))
+			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
 		
 		if mode == "box_and_closest":
 			for normal, attribute in zip(self.normals, calculate_height_and_width(instance)):
@@ -54,26 +55,27 @@ class Pose:
 					
 		if mode == "KDE":
 			bandwidth = parameters[0]
-			instance = np.array(list(instance))
 			likelihoods = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
-			likelihoods = np.sum(np.nan_to_num(likelihoods), axis = 0)
+			likelihoods = np.sum(np.nan_to_num(likelihoods, nan=0), axis = 0)
 			likelihoods[likelihoods == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), nan=0))
 			
 
 		if mode == "mean_imputation":
-			instance = np.array(list(instance))
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
 			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(likelihoods))
+			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
 
 		if mode == "absence_variable":
-			for normal, absence_prob, attribute in zip(self.normals, self.absence_probs, instance):
-				if not(np.isnan(attribute)):
-					likelihood += pdf(normal, attribute, "log")
-					likelihood += log_0(1-absence_prob)
-				else:
-					likelihood += log_0(absence_prob)
+			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihood += np.sum(np.nan_to_num(likelihoods, nan=0))
+			coordinate_present = np.isnan(instance[11:])
+			absence_probs = self.absence_probs[coordinate_present]
+			absence_probs[absence_probs == 0] = np.nan
+			likelihood += np.sum(np.nan_to_num(np.log(absence_probs), nan=0))
+			presence_probs = 1-self.absence_probs[np.logical_not(coordinate_present)]
+			presence_probs[presence_probs == 0] = np.nan
+			likelihood += np.sum(np.nan_to_num(np.log(presence_probs), nan=0))
 
 		return likelihood
 
@@ -102,18 +104,20 @@ def calculate_closest_points(instance):
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
+#CHANGE THE GROUP TO A NUMPY ARRAY, 
 def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
-	pose.prior = len(group[1])/num_instances
+	group = group.iloc[:,1:]
+	pose.prior = len(group)/num_instances
 	if (mode == "classic" or mode == "mean_imputation"):
-		pose.means = np.array(group.mean())
-		pose.stdevs = np.array(group.std())
+		pose.means = group.mean().to_numpy()
+		pose.stdevs = group.std().to_numpy()
 	if (mode == "KDE"):
-		pose.data = group.iloc[:,1:].to_numpy()
+		pose.data = group.to_numeric
 	if (mode == "absence_variable"):
-		pose.means = np.array(group.mean())
-		pose.stdevs = np.array(group.std())
-		pose.absence_probs = (len(group) - group.count())/len(group)
+		pose.means = group.mean().to_numpy()
+		pose.stdevs = group.std().to_numpy()
+		pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
 	if (mode == "box_and_closest"):
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
 		pose.means = widths_and_heights.mean()
@@ -169,7 +173,7 @@ def random_hold_out(data, hold_out_percent, mode, parameters):
 	
 #Cross validation
 def cross_validation(data, num_partitions, mode, parameters):
-	if num_paritions == -1:
+	if num_partitions == -1:
 		num_partitions = len(data)
 	indexes = np.array(data.index)
 	np.random.seed(3)
