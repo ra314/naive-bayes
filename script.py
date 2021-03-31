@@ -64,10 +64,11 @@ class Pose:
 					likelihood += log_0(total_pdf/len(data))
 
 		if mode == "mean_imputation":
-			for normal, attribute in zip(self.normals, instance):
-				if np.isnan(attribute):
-					attribute = normal.mean
-				likelihood += pdf(normal, attribute, "log")
+			instance = np.array(list(instance))
+			instance[np.where(np.isnan(instance))] = poses[0].means[np.where(np.isnan(instance))]
+			likelihoods = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			likelihoods[np.where(np.isnan(likelihoods))] = 0
+			likelihood += np.sum(likelihoods)
 
 		if mode == "absence_variable":
 			for normal, absence_prob, attribute in zip(self.normals, self.absence_probs, instance):
