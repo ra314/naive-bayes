@@ -57,7 +57,8 @@ class Pose:
 			instance = np.array(list(instance))
 			likelihoods = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
 			likelihoods = np.sum(np.nan_to_num(likelihoods), axis = 0)
-			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), neginf=0))
+			likelihoods[likelihoods == 0] = np.nan
+			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), nan=0))
 			
 
 		if mode == "mean_imputation":
