@@ -28,21 +28,21 @@ class Pose:
 			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
 		
 		if mode == "box_and_closest":
-			instance = calculate_height_and_width(instance)
-			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+			pose_dims = calculate_height_and_width(instance)
+			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((pose_dims-self.means)/self.stdevs)**2)
 			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
 
 			closest_points = calculate_closest_points(instance)
-			closest_points_indexes = np.where(closest_points != -1)
-			conditional_probs = self.closest_point_probs[closest_points_indexes, closest_points[closest_points_indexes]]
-			likelihood += np.sum(np.log(conditional_probs))
-					
+			closest_point_probs = self.closest_point_probs[np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
+			closest_point_probs[closest_point_probs == 0] = np.nan
+			likelihood += np.sum(np.nan_to_num(np.log(closest_point_probs), nan=0))
+
 		if mode == "KDE":
 			bandwidth = parameters[0]
-			likelihoods = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
-			likelihoods = np.sum(np.nan_to_num(likelihoods, nan=0), axis = 0)
-			likelihoods[likelihoods == 0] = np.nan
-			likelihood += np.sum(np.nan_to_num(np.log(likelihoods), nan=0))
+			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
+			sum_pdfs = np.sum(np.nan_to_num(pdfs, nan=0), axis = 0)
+			sum_pdfs[sum_pdfs == 0] = np.nan
+			likelihood += np.sum(np.nan_to_num(np.log(sum_pdfs), nan=0))
 			
 		if mode == "mean_imputation":
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
@@ -109,10 +109,12 @@ def calculate_model_info(group, num_instances, mode):
 		pose.means = widths_and_heights.mean()
 		pose.stdevs = widths_and_heights.std()
 		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
-		pose.closest_points_probs = np.zeros((11,12))
+		pose.closest_point_probs = np.zeros((11,12))
 		for column_index in closest_points:
 			counts = closest_points[column_index].value_counts()
-			pose.closest_points_probs[column_index][counts.index] = counts.values
+			pose.closest_point_probs[column_index][counts.index] = counts.values
+		pose.closest_point_probs = pose.closest_point_probs[:,:-1]
+		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
