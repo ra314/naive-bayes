@@ -73,7 +73,7 @@ def preprocess(filename):
 	
 #Calculate the height and width of the pose
 def calculate_height_and_width(instance):
-	return np.array(max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:]))
+	return np.array([max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])])
 	
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
@@ -105,14 +105,14 @@ def calculate_model_info(group, num_instances, mode):
 		pose.stdevs = group.std().to_numpy()
 		pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
 	if (mode == "box_and_closest"):
-		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in group.iterrows()])
+		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1]) for row in group.iterrows()])
 		pose.means = widths_and_heights.mean()
 		pose.stdevs = widths_and_heights.std()
-		calculate_closest_points(group)
-		#Create a dataframe that has 11 columns, populated with the index of the closest points
-		#This should be done with iterrows, list comprehsnsion and converting to a dataframe like line 116
-		#On each row apply the calcualte_closest_points(row) to get the closest points
-		#With this data frame, get the probability of each point being the closest point and store this in pose.closest_point_probs
+		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
+		pose.closest_points_probs = np.zeros((11,12))
+		for column_index in closest_points:
+			counts = closest_points[column_index].value_counts()
+			pose.closest_points_probs[column_index][counts.index] = counts.values
 	return pose
 
 #Training: Determining priors and attribute distributions for every class
@@ -120,8 +120,6 @@ def calculate_model_info(group, num_instances, mode):
 #Each object contains priors and attribute distributions
 def train(data, mode):
 	poses = [calculate_model_info(data.loc[group[1].index], len(data), mode) for group in data.groupby([0])]
-	#groups = data.groupby([0])
-	#poses = groups.apply(calculate_model_info, num_instances=len(data), mode = mode)
 	return poses
 
 #Returns the name of the most likely post for any given instance
@@ -174,7 +172,7 @@ def cross_validation(data, num_partitions, mode, parameters):
 	return accuracy/num_partitions
 	
 #Graph for picking bandwidth parameter
-def maximise_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
+def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
 	accuracies = []
 	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
 	for bandwidth in bandwidths:
