@@ -99,7 +99,7 @@ def calculate_height_and_width(instance):
 	instance = get_coordinates(instance)
 	instance = np.split(instance[np.logical_not(np.isnan(instance.astype(np.float)))], 2)
 	if len(instance[0]) == 0:
-		return np.array([0,0])
+		return np.array([np.nan,np.nan])
 	return np.array([max(instance[0])-min(instance[0]), max(instance[1])-min(instance[1])])
 
 #Take an instance and return a list containing the closest point to every point, that is not nan.
@@ -265,4 +265,12 @@ def plot_pose(instance):
 	if points[10].all() and points[11].all():
 		connect_points(points[10], points[11])
 		
+	plt.show()
+	
+#Plotting widths and heights of poses.
+def plot_heights_and_widths(data):
+	widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1][1:]) for row in data.iterrows()])
+	for group in data.groupby([0]):
+		group_widths_and_heights = widths_and_heights.loc[group[1].index]
+		plt.scatter(group_widths_and_heights[0], group_widths_and_heights[1], label=group[0])
 	plt.show()
