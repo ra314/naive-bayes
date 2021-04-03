@@ -74,10 +74,14 @@ def preprocess(filename):
 #Calculate the height and width of the pose
 def calculate_height_and_width(instance):
 	return np.array([max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])])
-	
+
+#Convert instance into coordinates
+def get_coordinates(instance):
+	return np.dstack((instance[:11], instance[11:]))[0]
+
 #Take an instance and return a list containing the closest point to every point, that is not nan
 def calculate_closest_points(instance):
-	points = np.dstack((instance[:11], instance[11:]))[0]
+	points = get_coordinates(instance)
 	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates
@@ -186,3 +190,39 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step)
 	plt.show()
 	
 	return bandwidths[np.argmax(accuracies)]
+	
+#Connect two points on a plot
+def connect_points(point1, point2):
+	plt.plot([point1[0], point2[0]], [point1[1], point2[1]])	
+	
+#Plotting poses
+def plot_pose(instance):
+	plt.title(instance[0])
+	points = get_coordinates(instance[1:])
+	#Added a dummy point for easier indexing
+	points = np.concatenate([[[np.nan, np.nan]], points])
+	plt.scatter(points[:,0], points[:,1])
+	
+	#Drawing lines between body points
+	if points[1].any() and points[2].any():
+		connect_points(points[1], points[2])
+	if points[2].any() and points[3].any():
+		connect_points(points[2], points[3])
+	if points[3].any() and points[4].any():
+		connect_points(points[3], points[4])
+	if points[2].any() and points[5].any():
+		connect_points(points[2], points[5])
+	if points[5].any() and points[6].any():
+		connect_points(points[5], points[6])
+	if points[2].any() and points[7].any():
+		connect_points(points[2], points[7])
+	if points[7].any() and points[8].any():
+		connect_points(points[7], points[8])
+	if points[8].any() and points[9].any():
+		connect_points(points[8], points[9])
+	if points[7].any() and points[10].any():
+		connect_points(points[7], points[10])
+	if points[10].any() and points[11].any():
+		connect_points(points[10], points[11])
+		
+	plt.show()
