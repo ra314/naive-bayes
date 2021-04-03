@@ -4,8 +4,6 @@ from math import log, pi, sqrt, exp
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-
-
 #Class that holds:
 #Priors for each pose and each attributes' normal distributions for the respective pose.
 #The various likelihood functions used in training and prediction phases.
@@ -90,13 +88,19 @@ def preprocess(filename):
 	train.replace(9999, np.NaN, inplace = True)
 	return train
 	
-#Calculate the height and width of the instance.
-def calculate_height_and_width(instance):
-	return np.array([max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])])
-
 #Convert instance (1x22) into coordinates (11x2).
 def get_coordinates(instance):
 	return np.dstack((instance[:11], instance[11:]))[0]
+	
+#Calculate the height and width of the instance.
+def calculate_height_and_width(instance):
+	#Convert the instance into coordinates. Convert it into floats, keep the non np.nan values.
+	#Split the array in two parts, x coordinates and y coordinates.
+	instance = get_coordinates(instance)
+	instance = np.split(instance[np.logical_not(np.isnan(instance.astype(np.float)))], 2)
+	if len(instance[0]) == 0:
+		return np.array([0,0])
+	return np.array([max(instance[0])-min(instance[0]), max(instance[1])-min(instance[1])])
 
 #Take an instance and return a list containing the closest point to every point, that is not nan.
 def calculate_closest_points(instance):
