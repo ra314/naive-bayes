@@ -94,7 +94,6 @@ def calculate_closest_points(instance):
 
 #Calculate priors and attribute distributions for a given dataframe
 #This dataframe should only hold data for a single class
-#CHANGE THE GROUP TO A NUMPY ARRAY, 
 def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	group = group.iloc[:,1:]
@@ -203,26 +202,31 @@ def plot_pose(instance):
 	points = np.concatenate([[[np.nan, np.nan]], points])
 	plt.scatter(points[:,0], points[:,1])
 	
+	#Annotating the points
+	for i in range(1,12):
+		if points[i].all():
+			plt.annotate(i, points[i])
+	
 	#Drawing lines between body points
-	if points[1].any() and points[2].any():
+	if points[1].all() and points[2].all():
 		connect_points(points[1], points[2])
-	if points[2].any() and points[3].any():
+	if points[2].all() and points[3].all():
 		connect_points(points[2], points[3])
-	if points[3].any() and points[4].any():
+	if points[3].all() and points[4].all():
 		connect_points(points[3], points[4])
-	if points[2].any() and points[5].any():
+	if points[2].all() and points[5].all():
 		connect_points(points[2], points[5])
-	if points[5].any() and points[6].any():
+	if points[5].all() and points[6].all():
 		connect_points(points[5], points[6])
-	if points[2].any() and points[7].any():
+	if points[2].all() and points[7].all():
 		connect_points(points[2], points[7])
-	if points[7].any() and points[8].any():
+	if points[7].all() and points[8].all():
 		connect_points(points[7], points[8])
-	if points[8].any() and points[9].any():
+	if points[8].all() and points[9].all():
 		connect_points(points[8], points[9])
-	if points[7].any() and points[10].any():
+	if points[7].all() and points[10].all():
 		connect_points(points[7], points[10])
-	if points[10].any() and points[11].any():
+	if points[10].all() and points[11].all():
 		connect_points(points[10], points[11])
 		
 	plt.show()
