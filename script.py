@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 
 
 
-#Class the holds priors for each pose
-#Also holds the normal distributions for each attribute
+#Class that holds:
+#Priors for each pose and each attributes' normal distributions for the respective pose.
+#The various likelihood functions used in training and prediction phases.
 class Pose:
 	def __init__(self, name):
 		self.name = name
@@ -21,8 +22,8 @@ class Pose:
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
-	#Calculates the pdfs for a vector of means, stdevs and x values
-	#Then logs the pdfs and returns the sum
+	#Calculates the pdfs for a vector of means, stdevs and x values.
+	#Then logs the pdfs and returns the sum.
 	def log_pdf_sum(self, instance):
 		log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
 		return np.sum(np.nan_to_num(log_pdfs, nan=0))
@@ -32,9 +33,11 @@ class Pose:
 		instance = pd.to_numeric(instance).to_numpy()
 		
 		if mode == "classic":
+			#Gaussian Naive Bayes
 			likelihood += self.log_pdf_sum(instance)
 		
 		if mode == "box_and_closest":
+			#RAHUL: EXPLAIN THE SUM GOING ON.
 			pose_dims = calculate_height_and_width(instance)
 			likelihood += self.log_pdf_sum(pose_dims)
 
@@ -44,6 +47,7 @@ class Pose:
 			likelihood += np.sum(np.nan_to_num(np.log(closest_point_probs), nan=0))
 
 		if mode == "KDE":
+			#RAHUL: EXPLAIN THE SUM HAPPENING
 			bandwidth = parameters[0]
 			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
 			sum_pdfs = np.sum(np.nan_to_num(pdfs, nan=0), axis = 0)
@@ -51,10 +55,13 @@ class Pose:
 			likelihood += np.sum(np.nan_to_num(np.log(sum_pdfs), nan=0))
 			
 		if mode == "mean_imputation":
+			#Impute missing points with the pose's average value for that point, then perform Gaussian Naive Bayes.
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
 			likelihood += self.log_pdf_sum(instance)
 
 		if mode == "absence_variable":
+			#Find the likelihood a point is visible and use this as a weight in the Gaussian Naive Bayes calculation.
+			#Since we are taking logs, the weights end up additive rather than multiplicative.
 			likelihood += self.log_pdf_sum(instance)
 			
 			coordinate_present = np.isnan(instance[11:])
@@ -69,26 +76,27 @@ class Pose:
 
 		return likelihood
 
-#Preprocessing: converts 9999 to np.NaN
+#Preprocessing: converts 9999 values to np.NaN
 def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
 	train.replace(9999, np.NaN, inplace = True)
 	return train
 	
-#Calculate the height and width of the pose
+#Calculate the height and width of the instance.
 def calculate_height_and_width(instance):
 	return np.array([max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])])
 
-#Convert instance into coordinates
+#Convert instance into coordinates.
 def get_coordinates(instance):
 	return np.dstack((instance[:11], instance[11:]))[0]
 
-#Take an instance and return a list containing the closest point to every point, that is not nan
+#Take an instance and return a list containing the closest point to every point, that is not nan.
 def calculate_closest_points(instance):
 	points = get_coordinates(instance)
 	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
-	#Assuming that no two body points share the same coordinates
+	#Assuming that no two body points share the same coordinates.
+	#Set distance to self and missing points as infinity.
 	distances[distances == 0] = np.nan
 	distances = np.nan_to_num(distances, nan=np.infty)
 	closest_points = np.argmin(distances, axis = 0)
@@ -96,22 +104,26 @@ def calculate_closest_points(instance):
 	closest_points[closest_points_distances == np.infty] = -1
 	return closest_points
 
-#Calculate priors and attribute distributions for a given dataframe
-#This dataframe should only hold data for a single class
+#Calculate priors and attribute distributions for a given dataframe depending on the mode provided.
+#This dataframe should only hold data for a single class.
 def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	group = group.iloc[:,1:]
 	pose.prior = len(group)/num_instances
 	if (mode == "classic" or mode == "mean_imputation"):
+		#Find mean and stdev for Gaussian Naive Bayes.
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
 	if (mode == "KDE"):
+		#RAHUL EXPLAIN
 		pose.data = group.to_numpy()
 	if (mode == "absence_variable"):
+		#Find mean and stdev for Gaussian Naive Bayes and the probabiities that a point is missing, given its class.
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
 		pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
 	if (mode == "box_and_closest"):
+		#Develop normals for width and height for a class. Also develops priors for each point's closest neighbour.
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1]) for row in group.iterrows()])
 		pose.means = widths_and_heights.mean()
 		pose.stdevs = widths_and_heights.std()
@@ -124,14 +136,14 @@ def calculate_model_info(group, num_instances, mode):
 		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
 	return pose
 
-#Training: Determining priors and attribute distributions for every class
-#Returns a pandas series that contains pose objects for every pose
-#Each object contains priors and attribute distributions
+#Training: Determines priors and attribute distributions for every class.
+#Returns a pandas series that contains pose objects for every pose.
+#Each object contains priors and attribute distributions.
 def train(data, mode):
 	poses = [calculate_model_info(data.loc[group[1].index], len(data), mode) for group in data.groupby([0])]
 	return poses
 
-#Returns the name of the most likely post for any given instance
+#Returns the name of the most likely pose for any given instance.
 def predict_instance(instance, poses, mode, parameters):
 	#Accounts for unpacking iterrows vs df.apply
 	if len(instance) == 2:
@@ -139,8 +151,8 @@ def predict_instance(instance, poses, mode, parameters):
 	likelihoods = [pose.calculate_likelihood(instance[1:], mode, parameters) for pose in poses]
 	return poses[np.argmax(likelihoods)].name
 
-#Predicts the class labels for a dataframe
-#Set speedup to true to use multiprocessing, false to use df.apply
+#Predicts the class labels for a dataframe.
+#Set speedup to true to use multiprocessing, false to use df.apply.
 #Multiprocessing will not work on windows or jupyter environments.
 def predict(data, poses, mode, parameters, speedup):
 	if speedup:
@@ -151,27 +163,29 @@ def predict(data, poses, mode, parameters, speedup):
 		predictions = data.apply(predict_instance, poses = poses, mode = mode, parameters = parameters, axis = 1)
 	return predictions
 
-#Calculate accuracy of predictions
+#Calculate accuracy of predictions.
 def evaluate(predictions, test):
 	correct = sum(predictions==test[0])
 	return 100*correct/len(predictions)
 	
-#Random hold out
+#Random hold out.
 def random_hold_out(data, hold_out_percent, mode, parameters):
-	train_data = data.sample(frac = hold_out_percent, random_state = 3)
+	train_data = data.sample(frac = hold_out_percent, random_state = 3) #RAHUL: STILL WANT TO FIX THE RANDOM STATE?
 	test_data = data.drop(train_data.index)
 	poses = train(train_data, mode)
 	predictions = predict(test_data, poses, mode, parameters, True)
 	print(evaluate(predictions, test_data))
 	
-#Cross validation
+#Cross validation.
 def cross_validation(data, num_partitions, mode, parameters):
+	#RAHUL: EXPLAIN STEP BEFORE LOOP.
 	if num_partitions == -1:
 		num_partitions = len(data)
 	indexes = np.array(data.index)
-	np.random.seed(3)
+	np.random.seed(3) #RAHUL: RANDOM STATE AGAIN
 	np.random.shuffle(indexes)
 	accuracy = 0
+	#Perform train, test and evaluate on each partition.
 	for test_set_indexes in np.array_split(indexes, num_partitions):
 		test_data = data.loc[test_set_indexes]
 		train_data = data.drop(test_data.index)
@@ -180,13 +194,13 @@ def cross_validation(data, num_partitions, mode, parameters):
 		accuracy += evaluate(predictions, test_data)
 	return accuracy/num_partitions
 	
-#Graph for picking bandwidth parameter
+#Graph for visualising bandwidth accuracies.
 def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
 	accuracies = []
 	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
 	for bandwidth in bandwidths:
 		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth])
-		print(bandwidth, accuracy)
+		print(bandwidth, accuracy) #RAHUL: STILL NEED PRINT STATEMENT?
 		accuracies.append(accuracy)
 	
 	plt.plot(accuracies)
@@ -194,11 +208,11 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step)
 	
 	return bandwidths[np.argmax(accuracies)]
 	
-#Connect two points on a plot
+#Connect two points on a plot.
 def connect_points(point1, point2):
 	plt.plot([point1[0], point2[0]], [point1[1], point2[1]])	
 	
-#Plotting poses
+#Plotting poses.
 def plot_pose(instance):
 	plt.title(instance[0])
 	points = get_coordinates(instance[1:])
@@ -206,12 +220,12 @@ def plot_pose(instance):
 	points = np.concatenate([[[np.nan, np.nan]], points])
 	plt.scatter(points[:,0], points[:,1])
 	
-	#Annotating the points
+	#Annotating the points.
 	for i in range(1,12):
 		if points[i].all():
 			plt.annotate(i, points[i])
 	
-	#Drawing lines between body points
+	#Drawing lines between body points.
 	if points[1].all() and points[2].all():
 		connect_points(points[1], points[2])
 	if points[2].all() and points[3].all():
