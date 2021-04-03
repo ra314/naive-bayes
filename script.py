@@ -37,17 +37,24 @@ class Pose:
 			likelihood += self.log_pdf_sum(instance)
 		
 		if mode == "box_and_closest":
-			#RAHUL: EXPLAIN THE SUM GOING ON.
+			#Gaussian Naive Bayes on the height and width of a pose.
 			pose_dims = calculate_height_and_width(instance)
 			likelihood += self.log_pdf_sum(pose_dims)
 
+			#For each point in an instance, get the index of the closest point to it.
 			closest_points = calculate_closest_points(instance)
+			#Naive Bayes using the closest point of every point as categorical attributes.
 			closest_point_probs = self.closest_point_probs[np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
+			#If the probability of the closest point is 0, change it to np.nan, so that np.log can be applied.
 			closest_point_probs[closest_point_probs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(closest_point_probs), nan=0))
 
 		if mode == "KDE":
-			#RAHUL: EXPLAIN THE SUM HAPPENING
+			#self.data contains all labelled instances for this pose.
+			#The pdfs are calculated treating each data point from self.data
+			#as the centre of a normal distribution with standard deviation = bandwidth.
+			#For any given instance there will be 22*(len(self.data)) pdfs calculated.
+			#These pdfs are then summed for each attribute. The 0's are converted to np.nan to allow np.log to be applied.
 			bandwidth = parameters[0]
 			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
 			sum_pdfs = np.sum(np.nan_to_num(pdfs, nan=0), axis = 0)
@@ -60,23 +67,24 @@ class Pose:
 			likelihood += self.log_pdf_sum(instance)
 
 		if mode == "absence_variable":
-			#Find the likelihood a point is visible and use this as a weight in the Gaussian Naive Bayes calculation.
-			#Since we are taking logs, the weights end up additive rather than multiplicative.
+			#Regular Guassian Naive Bayes.
 			likelihood += self.log_pdf_sum(instance)
 			
-			coordinate_present = np.isnan(instance[11:])
+			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
+			coordinates_absent = np.isnan(instance[11:])
 			
-			absence_probs = self.absence_probs[coordinate_present]
+			#Naive Bayes is applied using the absence or presence of every coordinate pair as a categorical attribute.
+			absence_probs = self.absence_probs[coordinates_absent]
 			absence_probs[absence_probs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(absence_probs), nan=0))
 			
-			presence_probs = 1-self.absence_probs[np.logical_not(coordinate_present)]
+			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
 			presence_probs[presence_probs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(presence_probs), nan=0))
 
 		return likelihood
 
-#Preprocessing: converts 9999 values to np.NaN
+#Preprocessing: converts 9999 values to np.NaN.
 def preprocess(filename):
 	train = pd.read_csv(filename, header = None)
 	train.replace(9999, np.NaN, inplace = True)
@@ -86,7 +94,7 @@ def preprocess(filename):
 def calculate_height_and_width(instance):
 	return np.array([max(instance[:11])-min(instance[:11]), max(instance[11:])-min(instance[11:])])
 
-#Convert instance into coordinates.
+#Convert instance (1x22) into coordinates (11x2).
 def get_coordinates(instance):
 	return np.dstack((instance[:11], instance[11:]))[0]
 
@@ -96,7 +104,7 @@ def calculate_closest_points(instance):
 	#Distances is a 2D array the contains the distances between all points
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates.
-	#Set distance to self and missing points as infinity.
+	#Set distance from the point to itself, and the distance for missing points as infinity.
 	distances[distances == 0] = np.nan
 	distances = np.nan_to_num(distances, nan=np.infty)
 	closest_points = np.argmin(distances, axis = 0)
@@ -110,24 +118,29 @@ def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	group = group.iloc[:,1:]
 	pose.prior = len(group)/num_instances
-	if (mode == "classic" or mode == "mean_imputation"):
-		#Find mean and stdev for Gaussian Naive Bayes.
+	if (mode == "classic" or mode == "mean_imputation" or mode == "absence_variable"):
+		#Find mean and stdev of the coordinates for Gaussian Naive Bayes.
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
+		
+		if (mode == "absence_variable"):
+			#Find probability of each point being absent.
+			pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
+			
 	if (mode == "KDE"):
-		#RAHUL EXPLAIN
+		#Storing the group data as a numpy array in the Pose object.
 		pose.data = group.to_numpy()
-	if (mode == "absence_variable"):
-		#Find mean and stdev for Gaussian Naive Bayes and the probabiities that a point is missing, given its class.
-		pose.means = group.mean().to_numpy()
-		pose.stdevs = group.std().to_numpy()
-		pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
+		
 	if (mode == "box_and_closest"):
-		#Develop normals for width and height for a class. Also develops priors for each point's closest neighbour.
+		#Find the mean and stdev of the height and width of every instance for Gaussian Naive Bayes.
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1]) for row in group.iterrows()])
 		pose.means = widths_and_heights.mean()
 		pose.stdevs = widths_and_heights.std()
+		
+		#Find the closest point of every point in the data frame. 
+		#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
 		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
+		#Then the probability of each point being the closest point for each body point is calculated for categorical Naive Bayes.
 		pose.closest_point_probs = np.zeros((11,12))
 		for column_index in closest_points:
 			counts = closest_points[column_index].value_counts()
@@ -170,7 +183,7 @@ def evaluate(predictions, test):
 	
 #Random hold out.
 def random_hold_out(data, hold_out_percent, mode, parameters):
-	train_data = data.sample(frac = hold_out_percent, random_state = 3) #RAHUL: STILL WANT TO FIX THE RANDOM STATE?
+	train_data = data.sample(frac = hold_out_percent, random_state = 3)
 	test_data = data.drop(train_data.index)
 	poses = train(train_data, mode)
 	predictions = predict(test_data, poses, mode, parameters, True)
@@ -178,11 +191,12 @@ def random_hold_out(data, hold_out_percent, mode, parameters):
 	
 #Cross validation.
 def cross_validation(data, num_partitions, mode, parameters):
-	#RAHUL: EXPLAIN STEP BEFORE LOOP.
+	#If num_paritions is set to -1, perform leave one out cross validation.
 	if num_partitions == -1:
 		num_partitions = len(data)
+	#We take the indexes of the data, and shuffle them.
 	indexes = np.array(data.index)
-	np.random.seed(3) #RAHUL: RANDOM STATE AGAIN
+	np.random.seed(3)
 	np.random.shuffle(indexes)
 	accuracy = 0
 	#Perform train, test and evaluate on each partition.
@@ -194,13 +208,13 @@ def cross_validation(data, num_partitions, mode, parameters):
 		accuracy += evaluate(predictions, test_data)
 	return accuracy/num_partitions
 	
-#Graph for visualising bandwidth accuracies.
+#Graph displaying the accuracy of KDE at a variety of bandwidths.
+#The function returns the bandwidth that maximised accuracy.
 def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
 	accuracies = []
 	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
 	for bandwidth in bandwidths:
 		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth])
-		print(bandwidth, accuracy) #RAHUL: STILL NEED PRINT STATEMENT?
 		accuracies.append(accuracy)
 	
 	plt.plot(accuracies)
