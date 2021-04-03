@@ -4,6 +4,8 @@ from math import log, pi, sqrt, exp
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
+
+
 #Class the holds priors for each pose
 #Also holds the normal distributions for each attribute
 class Pose:
@@ -19,18 +21,22 @@ class Pose:
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
+	#Calculates the pdfs for a vector of means, stdevs and x values
+	#Then logs the pdfs and returns the sum
+	def log_pdf_sum(self, instance):
+		log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+		return np.sum(np.nan_to_num(log_pdfs, nan=0))
+	
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = 0 if self.prior == 0 else log(self.prior)
 		instance = pd.to_numeric(instance).to_numpy()
 		
 		if mode == "classic":
-			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+			likelihood += self.log_pdf_sum(instance)
 		
 		if mode == "box_and_closest":
 			pose_dims = calculate_height_and_width(instance)
-			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((pose_dims-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+			likelihood += self.log_pdf_sum(pose_dims)
 
 			closest_points = calculate_closest_points(instance)
 			closest_point_probs = self.closest_point_probs[np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
@@ -46,12 +52,10 @@ class Pose:
 			
 		if mode == "mean_imputation":
 			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
-			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+			likelihood += self.log_pdf_sum(instance)
 
 		if mode == "absence_variable":
-			log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-			likelihood += np.sum(np.nan_to_num(log_pdfs, nan=0))
+			likelihood += self.log_pdf_sum(instance)
 			
 			coordinate_present = np.isnan(instance[11:])
 			
