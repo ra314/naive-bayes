@@ -3,6 +3,7 @@ import numpy as np
 from math import log, pi, sqrt, exp
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
+import time
 
 #Class that holds:
 #Priors for each pose and each attributes' normal distributions for the respective pose.
@@ -267,7 +268,15 @@ def plot_pose(instance):
 	if points[10].all() and points[11].all():
 		connect_points(points[10], points[11])
 		
-	plt.show()
+	plt.show(block=False)
+	
+def plot_all_poses(data, seconds_between_poses):
+	plt.ion()
+	for row in data.iterrows():
+		plot_pose(row[1])
+		plt.pause(seconds_between_poses)
+		plt.clf()
+	plt.close()
 	
 #Plotting widths and heights of poses.
 def plot_heights_and_widths(data):
