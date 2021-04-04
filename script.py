@@ -129,7 +129,8 @@ def calculate_model_info(group, num_instances, mode):
 		
 		if (mode == "absence_variable"):
 			#Find probability of each point being absent.
-			pose.absence_probs = (len(group) - group.iloc[:,11:].count().to_numpy())/len(group)
+			#Using Laplace add 1 smoothing
+			pose.absence_probs = ((len(group) - group.iloc[:,11:].count().to_numpy())+1)/len(group)
 			
 	if (mode == "KDE"):
 		#Storing the group data as a numpy array in the Pose object.
