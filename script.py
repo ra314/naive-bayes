@@ -150,7 +150,8 @@ def calculate_model_info(group, num_instances, mode):
 		for column_index in closest_points:
 			counts = closest_points[column_index].value_counts()
 			pose.closest_point_probs[column_index][counts.index] = counts.values
-		pose.closest_point_probs = pose.closest_point_probs[:,:-1]
+		#Add one laplace smoothing and getting rid of the NA value counts
+		pose.closest_point_probs = pose.closest_point_probs[:,:-1] + 1
 		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
 	return pose
 
