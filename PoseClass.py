@@ -57,7 +57,7 @@ class Pose:
 			#These pdfs are then summed for each attribute. 
 			bandwidth = parameters[0]
 			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
-			sum_pdfs = np.nansum(pdfs, axis = 0)
+			sum_pdfs = np.nansum(pdfs, axis = 0)/len(self.data)
 			sum_pdfs[sum_pdfs == 0] = np.nan
 			likelihood += np.nansum(np.log(sum_pdfs))
 		
