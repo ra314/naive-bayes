@@ -39,6 +39,8 @@ class Pose:
 		self.angle_means = []
 		self.angle_stdevs = []
 		
+		self.discretized_angle_probs = []
+		
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
 		
@@ -83,7 +85,7 @@ class Pose:
 			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
 			coordinates_absent = np.isnan(instance[11:])
 				
-			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
+			presence_probs = 1-self.absence_probs[~coordinates_absent]
 			presence_probs[presence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(presence_probs))
 		
@@ -130,11 +132,18 @@ class Pose:
 			distances = calculate_distance_between_points(instance)
 			likelihood += self.log_pdf_sum(distances, self.distance_means, self.distance_stdevs)
 			
-		#Gaissian Naive Bayes on key angles between points.
+		#Gaussian Naive Bayes on key angles between points.
 		if "key_angles" in mode:
 			angles = calculate_key_angles(instance)
 			likelihood += self.log_pdf_sum(angles, self.angle_means, self.angle_stdevs)
 				
+		#Categorical Naive Bayes on key angles between points.
+		if "discretized_key_angles" in mode:
+			angles = np.floor(calculate_key_angles(instance)/60)
+			for i in range(len(angles)):
+				if not np.isnan(angles[i]):
+					likelihood += log(self.discretized_angle_probs[i][int(angles[i])])
+					
 		#Diagnostic print to ensure nan values aren't leaking
 		if np.isnan(likelihood):
 			print(instance, mode)

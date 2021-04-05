@@ -52,7 +52,7 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		counts = discretized_height_to_width_ratios.value_counts()
 		pose.discretized_height_to_width_ratio_probs = np.zeros(3) + 1
 		pose.discretized_height_to_width_ratio_probs[list(map(lambda x: int(x[0]), counts.index))] += counts.values
-		pose.discretized_height_to_width_ratio_probs /= len(discretized_height_to_width_ratios)
+		pose.discretized_height_to_width_ratio_probs /= discretized_height_to_width_ratios.count()
 	
 	if "closest_points" in mode:
 		pose.closest_point_probs = {}
@@ -65,7 +65,7 @@ def calculate_model_info(group, num_instances, mode, parameters):
 			pose.closest_point_probs[n] = np.zeros((11,12)) + 1
 			for column_index in closest_points:
 				counts = closest_points[column_index].value_counts()
-				pose.closest_point_probs[n][column_index][counts.index] = counts.values
+				pose.closest_point_probs[n][column_index][counts.index] += counts.values
 			#Getting rid of the NA value counts.
 			pose.closest_point_probs[n] = pose.closest_point_probs[n][:,:-1]
 			pose.closest_point_probs[n] = pose.closest_point_probs[n]/(np.sum(pose.closest_point_probs[n], axis = 1)).reshape(11,1)
@@ -98,6 +98,18 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		angles = pd.DataFrame(calculate_key_angles(row[1]) for row in group.iterrows())
 		pose.angle_means = angles.mean()
 		pose.angle_stdevs = angles.std()
+		
+	if "discretized_key_angles" in mode:
+		#Find the discretized key angles for Categorical Naive Bayes.
+		angles = pd.DataFrame(calculate_key_angles(row[1]) for row in group.iterrows())
+		angles = (angles/60).apply(np.floor)
+		
+		pose.discretized_angle_probs = np.zeros((7,6))+1
+		for col in angles:
+			#Using Laplace add 1 smoothing.
+			counts = angles[col].value_counts()
+			pose.discretized_angle_probs[col][counts.index.astype('int')] += counts.values
+		pose.discretized_angle_probs /= angles.count().to_numpy().reshape(7,1)
 		
 	return pose
 
@@ -180,7 +192,7 @@ def select_modes_and_run():
 	modes = {0: "NULL", 1: "classic", 2: "KDE", 3: "coordinate_absence", 4: "coordinate_presence", 
 	5: "height_and_width", 6: "height_to_width_ratio", 7: "discretized_height_to_width_ratio",
 	8: "closest_points", 9: "arms_above_head", 10: "perpendicular_torso", 
-	11: "distance_between_points", 12: "key_angles"}
+	11: "distance_between_points", 12: "key_angles", 13: "discretized_key_angles"}
 	
 	print(modes, '\n')
 	
@@ -191,5 +203,5 @@ def select_modes_and_run():
 	parameters = input("Enter parameters for closest points, or leave blank: ")
 	parameters = list(map(int, parameters.split()))
 	
-	print(selected_modes)
-	print(cross_validation(data, 5, selected_modes, parameters, True))
+	print('\n', selected_modes)
+	print(cross_validation(data, 5, selected_modes, parameters, False))

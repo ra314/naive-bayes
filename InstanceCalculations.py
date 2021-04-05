@@ -97,7 +97,7 @@ def calculate_distance_between_points(instance):
 #Calculate the angle between two vectors:
 def calculate_angle(line1, line2):
 	return np.degrees(np.arccos(np.dot(line1, line2)/(np.linalg.norm(line1)*np.linalg.norm(line2))))
-	
+
 #Calculating the key angles
 def calculate_key_angles(instance):
 	#Labelling and getting all the points
