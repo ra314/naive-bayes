@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import combinations
 	
 #Convert instance (1x22) into coordinates (11x2).
 def get_coordinates(instance):
@@ -85,3 +86,10 @@ def calculate_perpendicular_torso(instance):
 	alignment_diff /= (num_present_points-1)
 	
 	return alignment_diff < 100
+	
+#Calculate the distance between each point
+def calculate_distance_between_points(instance):
+	points = get_coordinates(instance)
+	point_combos = np.array(list(combinations(points, 2)))
+	distances = np.sqrt(np.sum((point_combos[:,0]-point_combos[:,1])**2, axis=1))
+	return distances

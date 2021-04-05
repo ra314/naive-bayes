@@ -3,7 +3,7 @@ import numpy as np
 from multiprocessing import Pool
 from PoseClass import Pose
 
-from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points
 
 #Preprocessing: converts 9999 values to np.NaN.
 def preprocess(filename):
@@ -84,6 +84,11 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		prob_straight = (np.nansum(alignment_diffs) + 1)/len(alignment_diffs)
 		prob_not_straight = (len(alignment_diffs) - np.nansum(alignment_diffs) + 1)/len(alignment_diffs)
 		pose.perpendicular_torso_probs = [prob_not_straight, prob_straight]
+		
+	if "distance_between_points" in mode:
+		distances = pd.DataFrame(calculate_distance_between_points(row[1]) for row in group.iterrows())
+		pose.distance_means = distances.mean()
+		pose.distance_stdevs = distances.std()
 		
 	return pose
 
