@@ -16,6 +16,7 @@ class Pose:
 		self.stdevs = []
 		self.absence_probs = []
 		self.closest_point_probs = []
+		self.arms_above_head_probs = []
 		self.data = None
 		
 	def __str__(self):
@@ -25,7 +26,7 @@ class Pose:
 	#Then logs the pdfs and returns the sum.
 	def log_pdf_sum(self, instance):
 		log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
-		return np.sum(np.nan_to_num(log_pdfs, nan=0))
+		return np.nansum(log_pdfs)
 	
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = 0 if self.prior == 0 else log(self.prior)
@@ -46,7 +47,7 @@ class Pose:
 			closest_point_probs = self.closest_point_probs[np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
 			#If the probability of the closest point is 0, change it to np.nan, so that np.log can be applied.
 			closest_point_probs[closest_point_probs == 0] = np.nan
-			likelihood += np.sum(np.nan_to_num(np.log(closest_point_probs), nan=0))
+			likelihood += np.nansum(np.log(closest_point_probs))
 
 		if mode == "KDE":
 			#self.data contains all labelled instances for this pose.
@@ -56,9 +57,8 @@ class Pose:
 			#These pdfs are then summed for each attribute. The 0's are converted to np.nan to allow np.log to be applied.
 			bandwidth = parameters[0]
 			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
-			sum_pdfs = np.sum(np.nan_to_num(pdfs, nan=0), axis = 0)
-			sum_pdfs[sum_pdfs == 0] = np.nan
-			likelihood += np.sum(np.nan_to_num(np.log(sum_pdfs), nan=0))
+			sum_pdfs = np.nansum(pdfs, axis = 0)
+			likelihood += np.nansum(np.log(sum_pdfs))
 			
 		if mode == "absence_variable":
 			#Regular Guassian Naive Bayes.
@@ -70,11 +70,11 @@ class Pose:
 			#Naive Bayes is applied using the absence or presence of every coordinate pair as a categorical attribute.
 			absence_probs = self.absence_probs[coordinates_absent]
 			absence_probs[absence_probs == 0] = np.nan
-			likelihood += np.sum(np.nan_to_num(np.log(absence_probs), nan=0))
+			likelihood += np.nansum(np.log(absence_probs))
 			
 			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
 			presence_probs[presence_probs == 0] = np.nan
-			likelihood += np.sum(np.nan_to_num(np.log(presence_probs), nan=0))
+			likelihood += np.nansum(np.log(presence_probs))
 
 		return likelihood
 
@@ -105,13 +105,31 @@ def calculate_closest_points(instance):
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
 	#Assuming that no two body points share the same coordinates.
 	#Set distance from the point to itself, and the distance for missing points as infinity.
-	distances[distances == 0] = np.nan
+	distances[distances == 0] = np.infty
 	distances = np.nan_to_num(distances, nan=np.infty)
 	closest_points = np.argmin(distances, axis = 0)
 	closest_points_distances = np.min(distances, axis = 0)
 	closest_points[closest_points_distances == np.infty] = -1
 	return closest_points
 
+#Calculating the number of arms above the head
+def calculate_num_arms_above_head(instance):
+	num = 0
+	r_arm_y = [instance[3+11], instance[4+11]]
+	l_arm_y = [instance[5+11], instance[6+11]]
+	head_y = instance[1]
+	
+	if not np.isnan([instance[3+11], instance[4+11]]).all():
+		num += np.nanmean(r_arm_y) > head_y
+	
+	if not np.isnan([instance[5+11], instance[6+11]]).all():
+		num += np.nanmean(r_arm_y) > head_y
+		
+	if np.isnan(head_y):
+		return np.nan
+	else:
+		return num
+		
 #Calculate priors and attribute distributions for a given dataframe depending on the mode provided.
 #This dataframe should only hold data for a single class.
 def calculate_model_info(group, num_instances, mode):
@@ -142,13 +160,21 @@ def calculate_model_info(group, num_instances, mode):
 		#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
 		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
 		#Then the probability of each point being the closest point for each body point is calculated for categorical Naive Bayes.
-		pose.closest_point_probs = np.zeros((11,12))
+		#Using Laplace add 1 smoothing
+		pose.closest_point_probs = np.ones((11,12))
 		for column_index in closest_points:
 			counts = closest_points[column_index].value_counts()
 			pose.closest_point_probs[column_index][counts.index] = counts.values
-		#Add one laplace smoothing and getting rid of the NA value counts
-		pose.closest_point_probs = pose.closest_point_probs[:,:-1] + 1
+		#Getting rid of the NA value counts
+		pose.closest_point_probs = pose.closest_point_probs[:,:-1]
 		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
+		
+		#Attribute representing if 0, 1 or 2 arms are above the head
+		num_arms_above_head = group.apply(calculate_num_arms_above_head, axis=1)
+		count = num_arms_above_head.value_counts()
+		pose.arms_above_head_probs = np.ones(3)
+		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
+		
 	return pose
 
 #Training: Determines priors and attribute distributions for every class.
