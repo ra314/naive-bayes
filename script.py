@@ -3,7 +3,7 @@ import numpy as np
 from multiprocessing import Pool
 from PoseClass import Pose
 
-from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso
 
 #Preprocessing: converts 9999 values to np.NaN.
 def preprocess(filename):
@@ -45,7 +45,7 @@ def calculate_model_info(group, num_instances, mode):
 		pose.height_to_width_ratio_stdevs = height_to_width_ratios.std()
 	
 	if "discretized_height_to_width_ratio" in mode:
-		#Find the discretized height to width ratio for Gaussian Naive Bayes.
+		#Find the discretized height to width ratio for Categorical Naive Bayes.
 		discretized_height_to_width_ratios = pd.DataFrame([calculate_height_and_width(row[1], "discretized_height_to_width_ratio") for row in group.iterrows()])
 		#Using add one laplace smoothing.
 		counts = discretized_height_to_width_ratios.value_counts()
@@ -74,6 +74,14 @@ def calculate_model_info(group, num_instances, mode):
 		pose.arms_above_head_probs = np.ones(3)
 		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
 		pose.arms_above_head_probs /= sum(pose.arms_above_head_probs)
+		
+	if "perpendicular_torso" in mode:
+		#Calculating the probability that the torso is perpendicular for Categorical Naive Bayes.
+		alignment_diffs = list(group.apply(calculate_perpendicular_torso, axis=1))
+		#Using Laplace add 1 smoothing.
+		prob_straight = (np.nansum(alignment_diffs) + 1)/len(alignment_diffs)
+		prob_not_straight = (len(alignment_diffs) - np.nansum(alignment_diffs) + 1)/len(alignment_diffs)
+		pose.perpendicular_torso_probs = [prob_not_straight, prob_straight]
 		
 	return pose
 

@@ -2,7 +2,7 @@ import numpy as np
 from math import log, pi, sqrt, exp
 import pandas as pd
 
-from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso
 
 #Class that holds:
 #Priors for each pose and each attributes' normal distributions for the respective pose.
@@ -30,6 +30,8 @@ class Pose:
 		self.closest_point_probs = []
 		
 		self.arms_above_head_probs = []
+		
+		self.perpendicular_torso_probs = []
 		
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
@@ -109,8 +111,15 @@ class Pose:
 			arms_above_head = calculate_num_arms_above_head(instance)
 			if not np.isnan(arms_above_head):
 				likelihood += log(self.arms_above_head_probs[arms_above_head])
-
-		if np.isnan(likelihood):
-			print(instance, mode)
+				
+		#Categorical Naive Bayes on if the torso is perpendicular to the ground.
+		if "perpendicular_torso" in mode:
+			perpendicular_torso = calculate_perpendicular_torso(instance)
+			if not np.isnan(perpendicular_torso):
+				likelihood += log(self.perpendicular_torso_probs[perpendicular_torso])
+				
+		#Diagnostic print to ensure nan values aren't leaking
+		#if np.isnan(likelihood):
+			#print(instance, mode)
 		
 		return likelihood

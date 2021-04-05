@@ -68,3 +68,20 @@ def calculate_num_arms_above_head(instance):
 		return np.nan
 	else:
 		return num
+		
+#Determine if the torso is perpendicular to the ground
+def calculate_perpendicular_torso(instance):
+	head_x = instance[1]
+	neck_x = instance[2]
+	hip_x = instance[7]
+	alignment_diff = np.nansum(np.abs([head_x-neck_x, neck_x-hip_x, hip_x-head_x]), axis=0)
+	num_present_points = 3-np.sum(np.isnan([head_x, neck_x, hip_x]))
+	
+	if num_present_points <= 1:
+		return np.nan
+	
+	#Dividing the differences in alignment by the number of relevant body points present
+	#This way having more body points doesn't make being aligned harder
+	alignment_diff /= (num_present_points-1)
+	
+	return alignment_diff < 100
