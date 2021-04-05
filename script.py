@@ -41,6 +41,34 @@ class Pose:
 			#Gaussian Naive Bayes
 			likelihood += self.log_pdf_sum(instance, self.coordinate_means, self.coordinate_stdevs)
 		
+		if "KDE" in mode:
+			#self.data contains all labelled instances for this pose.
+			#The pdfs are calculated treating each data point from self.data
+			#as the centre of a normal distribution with standard deviation = bandwidth.
+			#For any given instance there will be 22*(len(self.data)) pdfs calculated.
+			#These pdfs are then summed for each attribute. The 0's are converted to np.nan to allow np.log to be applied.
+			bandwidth = parameters[0]
+			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
+			sum_pdfs = np.nansum(pdfs, axis = 0)
+			likelihood += np.nansum(np.log(sum_pdfs))
+		
+		if "absence_variable" in mode:			
+			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
+			coordinates_absent = np.isnan(instance[11:])
+			
+			#Naive Bayes is applied using the absence or presence of every coordinate pair as a categorical attribute.
+			absence_probs = self.absence_probs[coordinates_absent]
+			absence_probs[absence_probs == 0] = np.nan
+			likelihood += np.nansum(np.log(absence_probs))
+		
+		if "presence_variable" in mode:			
+			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
+			coordinates_absent = np.isnan(instance[11:])
+				
+			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
+			presence_probs[presence_probs == 0] = np.nan
+			likelihood += np.nansum(np.log(presence_probs))
+		
 		if "pose_dims" in mode:
 			#Gaussian Naive Bayes on the height and width of a pose.
 			pose_dims = calculate_height_and_width(instance)
@@ -60,34 +88,6 @@ class Pose:
 			arms_above_head = calculate_num_arms_above_head(instance)
 			#if not np.isnan(arms_above_head):
 				#likelihood += log(self.arms_above_head_probs[arms_above_head])
-
-		if "KDE" in mode:
-			#self.data contains all labelled instances for this pose.
-			#The pdfs are calculated treating each data point from self.data
-			#as the centre of a normal distribution with standard deviation = bandwidth.
-			#For any given instance there will be 22*(len(self.data)) pdfs calculated.
-			#These pdfs are then summed for each attribute. The 0's are converted to np.nan to allow np.log to be applied.
-			bandwidth = parameters[0]
-			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
-			sum_pdfs = np.nansum(pdfs, axis = 0)
-			likelihood += np.nansum(np.log(sum_pdfs))
-			
-		if "absence_variable" in mode:			
-			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
-			coordinates_absent = np.isnan(instance[11:])
-			
-			#Naive Bayes is applied using the absence or presence of every coordinate pair as a categorical attribute.
-			absence_probs = self.absence_probs[coordinates_absent]
-			absence_probs[absence_probs == 0] = np.nan
-			likelihood += np.nansum(np.log(absence_probs))
-		
-		if "presence_variable" in mode:			
-			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
-			coordinates_absent = np.isnan(instance[11:])
-				
-			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
-			presence_probs[presence_probs == 0] = np.nan
-			likelihood += np.nansum(np.log(presence_probs))
 
 		return likelihood
 
@@ -155,14 +155,14 @@ def calculate_model_info(group, num_instances, mode):
 		pose.coordinate_means = group.mean().to_numpy()
 		pose.coordinate_stdevs = group.std().to_numpy()
 		
+	if "KDE" in mode:
+		#Storing the group data as a numpy array in the Pose object.
+		pose.data = group.to_numpy()
+		
 	if "absence_variable" in mode or "presence_variable" in mode:
 		#Find probability of each point being absent.
 		#Using Laplace add 1 smoothing
 		pose.absence_probs = ((len(group) - group.iloc[:,11:].count().to_numpy())+1)/len(group)
-			
-	if "KDE" in mode:
-		#Storing the group data as a numpy array in the Pose object.
-		pose.data = group.to_numpy()
 		
 	if "pose_dims" in mode:
 		#Find the mean and stdev of the height and width of every instance for Gaussian Naive Bayes.
@@ -192,6 +192,8 @@ def calculate_model_info(group, num_instances, mode):
 		pose.arms_above_head_probs = np.ones(3)
 		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
 		pose.arms_above_head_probs /= sum(pose.arms_above_head_probs)
+		
+	return pose
 
 #Training: Determines priors and attribute distributions for every class.
 #Returns a pandas series that contains pose objects for every pose.
