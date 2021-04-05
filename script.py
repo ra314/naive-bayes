@@ -3,7 +3,8 @@ import numpy as np
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 from PoseClass import Pose
-from InstanceCalculations import *
+
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head
 
 #Preprocessing: converts 9999 values to np.NaN.
 def preprocess(filename):

@@ -1,7 +1,8 @@
 import numpy as np
 from math import log, pi, sqrt, exp
 import pandas as pd
-from InstanceCalculations import *
+
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head
 
 #Class that holds:
 #Priors for each pose and each attributes' normal distributions for the respective pose.
