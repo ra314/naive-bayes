@@ -92,7 +92,8 @@ class Pose:
 		#Categorical Naive Bayes on the discretized height to width ratio of a pose.
 		if "discretized_height_to_width_ratio" in mode:
 			discretized_height_to_width_ratio = calculate_height_and_width(instance, "discretized_height_to_width_ratio")
-			likelihood += log(self.discretized_height_to_width_ratio_probs[int(discretized_height_to_width_ratio)])
+			if not np.isnan(discretized_height_to_width_ratio):
+				likelihood += log(self.discretized_height_to_width_ratio_probs[discretized_height_to_width_ratio])
 			
 		#Categorical Naive Bayes on the closest point of every point of a pose.
 		if "closest_points" in mode:
@@ -109,4 +110,7 @@ class Pose:
 			if not np.isnan(arms_above_head):
 				likelihood += log(self.arms_above_head_probs[arms_above_head])
 
+		if np.isnan(likelihood):
+			print(instance, mode)
+		
 		return likelihood
