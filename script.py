@@ -48,6 +48,11 @@ class Pose:
 			#If the probability of the closest point is 0, change it to np.nan, so that np.log can be applied.
 			closest_point_probs[closest_point_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(closest_point_probs))
+			
+			#Naive Bayes is applied using the number of arms above the head as a categorical variable
+			arms_above_head = calculate_num_arms_above_head(instance)
+			#if not np.isnan(arms_above_head):
+				#likelihood += log(self.arms_above_head_probs[arms_above_head])
 
 		if mode == "KDE":
 			#self.data contains all labelled instances for this pose.
@@ -119,11 +124,11 @@ def calculate_num_arms_above_head(instance):
 	l_arm_y = [instance[5+11], instance[6+11]]
 	head_y = instance[1]
 	
-	if not np.isnan([instance[3+11], instance[4+11]]).all():
+	if not np.isnan(r_arm_y).all():
 		num += np.nanmean(r_arm_y) > head_y
 	
-	if not np.isnan([instance[5+11], instance[6+11]]).all():
-		num += np.nanmean(r_arm_y) > head_y
+	if not np.isnan(l_arm_y).all():
+		num += np.nanmean(l_arm_y) > head_y
 		
 	if np.isnan(head_y):
 		return np.nan
@@ -171,9 +176,11 @@ def calculate_model_info(group, num_instances, mode):
 		
 		#Attribute representing if 0, 1 or 2 arms are above the head
 		num_arms_above_head = group.apply(calculate_num_arms_above_head, axis=1)
-		count = num_arms_above_head.value_counts()
+		counts = num_arms_above_head.value_counts()
+		#Using Laplace add 1 smoothing
 		pose.arms_above_head_probs = np.ones(3)
 		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
+		pose.arms_above_head_probs /= sum(pose.arms_above_head_probs)
 		
 	return pose
 
