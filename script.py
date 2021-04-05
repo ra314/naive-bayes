@@ -12,8 +12,13 @@ class Pose:
 	def __init__(self, name):
 		self.name = name
 		self.prior = None
-		self.means = []
-		self.stdevs = []
+		
+		self.coordinate_means = []
+		self.cooridnate_stdevs = []
+		
+		self.pose_dims_means = []
+		self.pose_dims_stdevs = []
+		
 		self.absence_probs = []
 		self.closest_point_probs = []
 		self.arms_above_head_probs = []
@@ -24,23 +29,24 @@ class Pose:
 		
 	#Calculates the pdfs for a vector of means, stdevs and x values.
 	#Then logs the pdfs and returns the sum.
-	def log_pdf_sum(self, instance):
-		log_pdfs = -np.log(self.stdevs*sqrt(2*pi))-0.5*(((instance-self.means)/self.stdevs)**2)
+	def log_pdf_sum(self, instance, means, stdevs):
+		log_pdfs = -np.log(stdevs*sqrt(2*pi))-0.5*(((instance-means)/stdevs)**2)
 		return np.nansum(log_pdfs)
 	
 	def calculate_likelihood(self, instance, mode, parameters):
 		likelihood = 0 if self.prior == 0 else log(self.prior)
 		instance = pd.to_numeric(instance).to_numpy()
 		
-		if mode == "classic":
+		if "classic" in mode:
 			#Gaussian Naive Bayes
-			likelihood += self.log_pdf_sum(instance)
+			likelihood += self.log_pdf_sum(instance, self.coordinate_means, self.coordinate_stdevs)
 		
-		if mode == "box_and_closest":
+		if "pose_dims" in mode:
 			#Gaussian Naive Bayes on the height and width of a pose.
 			pose_dims = calculate_height_and_width(instance)
-			likelihood += self.log_pdf_sum(pose_dims)
+			likelihood += self.log_pdf_sum(pose_dims, self.pose_dims_means, self.pose_dims_stdevs)
 
+		if "closest_points" in mode:
 			#For each point in an instance, get the index of the closest point to it.
 			closest_points = calculate_closest_points(instance)
 			#Naive Bayes using the closest point of every point as categorical attributes.
@@ -48,13 +54,14 @@ class Pose:
 			#If the probability of the closest point is 0, change it to np.nan, so that np.log can be applied.
 			closest_point_probs[closest_point_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(closest_point_probs))
-			
+		
+		if "arms_above_head" in mode:
 			#Naive Bayes is applied using the number of arms above the head as a categorical variable
 			arms_above_head = calculate_num_arms_above_head(instance)
 			#if not np.isnan(arms_above_head):
 				#likelihood += log(self.arms_above_head_probs[arms_above_head])
 
-		if mode == "KDE":
+		if "KDE" in mode:
 			#self.data contains all labelled instances for this pose.
 			#The pdfs are calculated treating each data point from self.data
 			#as the centre of a normal distribution with standard deviation = bandwidth.
@@ -65,10 +72,7 @@ class Pose:
 			sum_pdfs = np.nansum(pdfs, axis = 0)
 			likelihood += np.nansum(np.log(sum_pdfs))
 			
-		if mode == "absence_variable":
-			#Regular Guassian Naive Bayes.
-			likelihood += self.log_pdf_sum(instance)
-			
+		if "absence_variable" in mode:			
 			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
 			coordinates_absent = np.isnan(instance[11:])
 			
@@ -76,7 +80,11 @@ class Pose:
 			absence_probs = self.absence_probs[coordinates_absent]
 			absence_probs[absence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(absence_probs))
-			
+		
+		if "presence_variable" in mode:			
+			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
+			coordinates_absent = np.isnan(instance[11:])
+				
 			presence_probs = 1-self.absence_probs[np.logical_not(coordinates_absent)]
 			presence_probs[presence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(presence_probs))
@@ -139,28 +147,30 @@ def calculate_num_arms_above_head(instance):
 #This dataframe should only hold data for a single class.
 def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
-	group = group.iloc[:,1:]
 	pose.prior = len(group)/num_instances
-	if (mode == "classic" or mode == "absence_variable"):
+	group = group.iloc[:,1:]
+	
+	if "classic" in mode:
 		#Find mean and stdev of the coordinates for Gaussian Naive Bayes.
-		pose.means = group.mean().to_numpy()
-		pose.stdevs = group.std().to_numpy()
+		pose.coordinate_means = group.mean().to_numpy()
+		pose.coordinate_stdevs = group.std().to_numpy()
 		
-		if (mode == "absence_variable"):
-			#Find probability of each point being absent.
-			#Using Laplace add 1 smoothing
-			pose.absence_probs = ((len(group) - group.iloc[:,11:].count().to_numpy())+1)/len(group)
+	if "absence_variable" in mode or "presence_variable" in mode:
+		#Find probability of each point being absent.
+		#Using Laplace add 1 smoothing
+		pose.absence_probs = ((len(group) - group.iloc[:,11:].count().to_numpy())+1)/len(group)
 			
-	if (mode == "KDE"):
+	if "KDE" in mode:
 		#Storing the group data as a numpy array in the Pose object.
 		pose.data = group.to_numpy()
 		
-	if (mode == "box_and_closest"):
+	if "pose_dims" in mode:
 		#Find the mean and stdev of the height and width of every instance for Gaussian Naive Bayes.
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1]) for row in group.iterrows()])
 		pose.means = widths_and_heights.mean()
 		pose.stdevs = widths_and_heights.std()
-		
+	
+	if "closest_points" in mode:	
 		#Find the closest point of every point in the data frame. 
 		#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
 		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
@@ -174,6 +184,7 @@ def calculate_model_info(group, num_instances, mode):
 		pose.closest_point_probs = pose.closest_point_probs[:,:-1]
 		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
 		
+	if "arms_above_head" in mode:
 		#Attribute representing if 0, 1 or 2 arms are above the head
 		num_arms_above_head = group.apply(calculate_num_arms_above_head, axis=1)
 		counts = num_arms_above_head.value_counts()
@@ -181,8 +192,6 @@ def calculate_model_info(group, num_instances, mode):
 		pose.arms_above_head_probs = np.ones(3)
 		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
 		pose.arms_above_head_probs /= sum(pose.arms_above_head_probs)
-		
-	return pose
 
 #Training: Determines priors and attribute distributions for every class.
 #Returns a pandas series that contains pose objects for every pose.
