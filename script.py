@@ -60,11 +60,6 @@ class Pose:
 			sum_pdfs[sum_pdfs == 0] = np.nan
 			likelihood += np.sum(np.nan_to_num(np.log(sum_pdfs), nan=0))
 			
-		if mode == "mean_imputation":
-			#Impute missing points with the pose's average value for that point, then perform Gaussian Naive Bayes.
-			instance[np.isnan(instance)] = self.means[np.isnan(instance)]
-			likelihood += self.log_pdf_sum(instance)
-
 		if mode == "absence_variable":
 			#Regular Guassian Naive Bayes.
 			likelihood += self.log_pdf_sum(instance)
@@ -123,7 +118,7 @@ def calculate_model_info(group, num_instances, mode):
 	pose = Pose(group[0].iloc[0])
 	group = group.iloc[:,1:]
 	pose.prior = len(group)/num_instances
-	if (mode == "classic" or mode == "mean_imputation" or mode == "absence_variable"):
+	if (mode == "classic" or mode == "absence_variable"):
 		#Find mean and stdev of the coordinates for Gaussian Naive Bayes.
 		pose.means = group.mean().to_numpy()
 		pose.stdevs = group.std().to_numpy()
