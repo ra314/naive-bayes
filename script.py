@@ -173,3 +173,22 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step)
 	plt.show()
 	
 	return bandwidths[np.argmax(accuracies)]
+	
+#Function that simplifies modes for cross validation
+def select_modes_and_run():
+	data = preprocess('train.csv')
+	modes = {0: "NULL", 1: "classic", 2: "KDE", 3: "coordinate_absence", 4: "coordinate_presence", 
+	5: "height_and_width", 6: "height_to_width_ratio", 7: "discretized_height_to_width_ratio",
+	8: "closest_points", 9: "arms_above_head", 10: "perpendicular_torso", 
+	11: "distance_between_points", 12: "key_angles"}
+	
+	print(modes)
+	
+	selected_modes = input("Enter the numbers separated by spaces: ")
+	selected_modes = list(map(int, selected_modes.split()))
+	selected_modes = [modes[mode] for mode in selected_modes]
+	
+	parameters = input("Enter parameters for closest points, or leave blank: ")
+	parameters = list(map(int, parameters.split()))
+	
+	print(cross_validation(data, 5, selected_modes, parameters, True))
