@@ -2,7 +2,7 @@ import numpy as np
 from math import log, pi, sqrt, exp
 import pandas as pd
 
-from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points, calculate_key_angles
 
 #Class that holds:
 #Priors for each pose and each attributes' normal distributions for the respective pose.
@@ -35,6 +35,9 @@ class Pose:
 		
 		self.distance_means = []
 		self.distance_stdevs = []
+		
+		self.angle_means = []
+		self.angle_stdevs = []
 		
 	def __str__(self):
 		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
@@ -126,6 +129,11 @@ class Pose:
 		if "distance_between_points" in mode:
 			distances = calculate_distance_between_points(instance)
 			likelihood += self.log_pdf_sum(distances, self.distance_means, self.distance_stdevs)
+			
+		#Gaissian Naive Bayes on key angles between points.
+		if "key_angles" in mode:
+			angles = calculate_key_angles(instance)
+			likelihood += self.log_pdf_sum(angles, self.angle_means, self.angle_stdevs)
 				
 		#Diagnostic print to ensure nan values aren't leaking
 		if np.isnan(likelihood):

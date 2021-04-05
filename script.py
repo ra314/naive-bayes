@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool
-from PoseClass import Pose
 
-from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points
+from PoseClass import Pose
+from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points, calculate_key_angles
+from PlotPose import *
 
 #Preprocessing: converts 9999 values to np.NaN.
 def preprocess(filename):
@@ -87,12 +88,16 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		pose.perpendicular_torso_probs = [prob_not_straight, prob_straight]
 		
 	if "distance_between_points" in mode:
+		#Calculating the distance between all points for Gaussian Naive Bayes.
 		distances = pd.DataFrame(calculate_distance_between_points(row[1]) for row in group.iterrows())
 		pose.distance_means = distances.mean()
 		pose.distance_stdevs = distances.std()
 		
 	if "key_angles" in mode:
-		pass
+		#Calculating the key angles between points for Gaussian Naive Bayes.
+		angles = pd.DataFrame(calculate_key_angles(row[1]) for row in group.iterrows())
+		pose.angle_means = angles.mean()
+		pose.angle_stdevs = angles.std()
 		
 	return pose
 

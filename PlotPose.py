@@ -1,5 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+
+from InstanceCalculations import get_coordinates
 	
 #Connect two points on a plot.
 def connect_points(point1, point2):
@@ -40,7 +43,7 @@ def plot_pose(instance):
 	if points[10].all() and points[11].all():
 		connect_points(points[10], points[11])
 		
-	plt.show(block=False)
+	plt.show()
 	
 def plot_all_poses(data, seconds_between_poses):
 	plt.ion()

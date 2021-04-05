@@ -93,3 +93,38 @@ def calculate_distance_between_points(instance):
 	point_combos = np.array(list(combinations(points, 2)))
 	distances = np.sqrt(np.sum((point_combos[:,0]-point_combos[:,1])**2, axis=1))
 	return distances
+	
+#Calculate the angle between two vectors:
+def calculate_angle(line1, line2):
+	return np.degrees(np.arccos(np.dot(line1, line2)/(np.linalg.norm(line1)*np.linalg.norm(line2))))
+	
+#Calculating the key angles
+def calculate_key_angles(instance):
+	#Labelling and getting all the points
+	points = np.concatenate((np.zeros((1,2)), get_coordinates(instance)))
+	head = points[1]
+	neck = points[2]
+	r_elbow = points[3]
+	r_hand = points[4]
+	l_elbow = points[5]
+	l_hand = points[6]
+	hip = points[7]
+	r_knee = points[8]
+	r_foot = points[9]
+	l_knee = points[10]
+	l_foot = points[11]
+	
+	#Calculating the import angles
+	angles = np.zeros(7)
+	angles[0] = calculate_angle(r_knee-hip, l_knee-hip)
+	
+	angles[1] = calculate_angle(r_hand-r_elbow, neck-r_elbow)
+	angles[2] = calculate_angle(l_hand-l_elbow, neck-l_elbow)
+	
+	angles[3] = calculate_angle(r_elbow-neck, hip-neck)
+	angles[4] = calculate_angle(l_elbow-neck, hip-neck)
+	
+	angles[5] = calculate_angle(r_foot-r_knee, hip-r_knee)
+	angles[6] = calculate_angle(l_foot-l_knee, hip-l_knee)
+	
+	return angles
