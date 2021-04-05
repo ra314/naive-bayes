@@ -14,10 +14,10 @@ class Pose:
 		self.prior = None
 		
 		self.coordinate_means = []
-		self.cooridnate_stdevs = []
+		self.coordinate_stdevs = []
 		
-		self.pose_dims_means = []
-		self.pose_dims_stdevs = []
+		self.bounding_box_means = []
+		self.bounding_box_stdevs = []
 		
 		self.absence_probs = []
 		self.closest_point_probs = []
@@ -52,7 +52,7 @@ class Pose:
 			sum_pdfs = np.nansum(pdfs, axis = 0)
 			likelihood += np.nansum(np.log(sum_pdfs))
 		
-		if "absence_variable" in mode:			
+		if "coordinate_absence" in mode:			
 			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
 			coordinates_absent = np.isnan(instance[11:])
 			
@@ -61,7 +61,7 @@ class Pose:
 			absence_probs[absence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(absence_probs))
 		
-		if "presence_variable" in mode:			
+		if "coordinate_presence" in mode:			
 			#This is a boolean array. True if the coordinate pair is missing, False otherwise.
 			coordinates_absent = np.isnan(instance[11:])
 				
@@ -69,10 +69,10 @@ class Pose:
 			presence_probs[presence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(presence_probs))
 		
-		if "pose_dims" in mode:
+		if "bounding_box" in mode:
 			#Gaussian Naive Bayes on the height and width of a pose.
-			pose_dims = calculate_height_and_width(instance)
-			likelihood += self.log_pdf_sum(pose_dims, self.pose_dims_means, self.pose_dims_stdevs)
+			bounding_box = calculate_height_and_width(instance)
+			likelihood += self.log_pdf_sum(bounding_box, self.bounding_box_means, self.bounding_box_stdevs)
 
 		if "closest_points" in mode:
 			#For each point in an instance, get the index of the closest point to it.
@@ -159,16 +159,16 @@ def calculate_model_info(group, num_instances, mode):
 		#Storing the group data as a numpy array in the Pose object.
 		pose.data = group.to_numpy()
 		
-	if "absence_variable" in mode or "presence_variable" in mode:
+	if "coordinate_absence" in mode or "coordinate_presence" in mode:
 		#Find probability of each point being absent.
 		#Using Laplace add 1 smoothing
 		pose.absence_probs = ((len(group) - group.iloc[:,11:].count().to_numpy())+1)/len(group)
 		
-	if "pose_dims" in mode:
+	if "bounding_box" in mode:
 		#Find the mean and stdev of the height and width of every instance for Gaussian Naive Bayes.
 		widths_and_heights = pd.DataFrame([calculate_height_and_width(row[1]) for row in group.iterrows()])
-		pose.means = widths_and_heights.mean()
-		pose.stdevs = widths_and_heights.std()
+		pose.bounding_box_means = widths_and_heights.mean()
+		pose.bounding_box_stdevs = widths_and_heights.std()
 	
 	if "closest_points" in mode:	
 		#Find the closest point of every point in the data frame. 
