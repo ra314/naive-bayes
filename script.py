@@ -13,7 +13,7 @@ def preprocess(filename):
 
 #Calculate priors and attribute distributions for a given dataframe depending on the mode provided.
 #This dataframe should only hold data for a single class.
-def calculate_model_info(group, num_instances, mode):
+def calculate_model_info(group, num_instances, mode, parameters):
 	pose = Pose(group[0].iloc[0])
 	pose.prior = len(group)/num_instances
 	group = group.iloc[:,1:]
@@ -49,29 +49,31 @@ def calculate_model_info(group, num_instances, mode):
 		discretized_height_to_width_ratios = pd.DataFrame([calculate_height_and_width(row[1], "discretized_height_to_width_ratio") for row in group.iterrows()])
 		#Using add one laplace smoothing.
 		counts = discretized_height_to_width_ratios.value_counts()
-		pose.discretized_height_to_width_ratio_probs = np.zeros(3)+1
+		pose.discretized_height_to_width_ratio_probs = np.zeros(3) + 1
 		pose.discretized_height_to_width_ratio_probs[list(map(lambda x: int(x[0]), counts.index))] += counts.values/len(discretized_height_to_width_ratios)
 	
-	if "closest_points" in mode:	
-		#Find the closest point of every point in the data frame. 
-		#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
-		closest_points = pd.DataFrame([calculate_closest_points(row[1], 0) for row in group.iterrows()])
-		#Then the probability of each point being the closest point for each body point is calculated for categorical Naive Bayes.
-		#Using Laplace add 1 smoothing.
-		pose.closest_point_probs = np.ones((11,12))
-		for column_index in closest_points:
-			counts = closest_points[column_index].value_counts()
-			pose.closest_point_probs[column_index][counts.index] = counts.values
-		#Getting rid of the NA value counts.
-		pose.closest_point_probs = pose.closest_point_probs[:,:-1]
-		pose.closest_point_probs = pose.closest_point_probs/(np.sum(pose.closest_point_probs, axis = 1)).reshape(11,1)
+	if "closest_points" in mode:
+		pose.closest_point_probs = {}
+		for n in parameters:
+			#Find the closest point of every point in the data frame. 
+			#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
+			closest_points = pd.DataFrame([calculate_closest_points(row[1], n) for row in group.iterrows()])
+			#Then the probability of each point being the closest point for each body point is calculated for categorical Naive Bayes.
+			#Using Laplace add 1 smoothing.
+			pose.closest_point_probs[n] = np.zeros((11,12)) + 1
+			for column_index in closest_points:
+				counts = closest_points[column_index].value_counts()
+				pose.closest_point_probs[n][column_index][counts.index] = counts.values
+			#Getting rid of the NA value counts.
+			pose.closest_point_probs[n] = pose.closest_point_probs[n][:,:-1]
+			pose.closest_point_probs[n] = pose.closest_point_probs[n]/(np.sum(pose.closest_point_probs[n], axis = 1)).reshape(11,1)
 		
 	if "arms_above_head" in mode:
 		#Attribute representing if 0, 1 or 2 arms are above the head.
 		num_arms_above_head = group.apply(calculate_num_arms_above_head, axis=1)
 		counts = num_arms_above_head.value_counts()
 		#Using Laplace add 1 smoothing.
-		pose.arms_above_head_probs = np.ones(3)
+		pose.arms_above_head_probs = np.zeros(3) + 1
 		pose.arms_above_head_probs[counts.index.astype('int')] += counts.values
 		pose.arms_above_head_probs /= sum(pose.arms_above_head_probs)
 		
@@ -88,8 +90,8 @@ def calculate_model_info(group, num_instances, mode):
 #Training: Determines priors and attribute distributions for every class.
 #Returns a pandas series that contains pose objects for every pose.
 #Each object contains priors and attribute distributions.
-def train(data, mode):
-	poses = [calculate_model_info(data.loc[group[1].index], len(data), mode) for group in data.groupby([0])]
+def train(data, mode, parameters):
+	poses = [calculate_model_info(data.loc[group[1].index], len(data), mode, parameters) for group in data.groupby([0])]
 	return poses
 
 #Returns the name of the most likely pose for any given instance.
@@ -139,7 +141,7 @@ def cross_validation(data, num_partitions, mode, parameters, speedup):
 	for test_set_indexes in np.array_split(indexes, num_partitions):
 		test_data = data.loc[test_set_indexes]
 		train_data = data.drop(test_data.index)
-		poses = train(train_data, mode)
+		poses = train(train_data, mode, parameters)
 		predictions = predict(test_data, poses, mode, parameters, speedup)
 		accuracy += evaluate(predictions, test_data)
 	return accuracy/num_partitions

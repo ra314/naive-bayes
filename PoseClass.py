@@ -99,12 +99,13 @@ class Pose:
 			
 		#Categorical Naive Bayes on the closest point of every point of a pose.
 		if "closest_points" in mode:
-			#For each point in an instance, get the index of the closest point to it.
-			closest_points = calculate_closest_points(instance, 0)
-			
-			closest_point_probs = self.closest_point_probs[np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
-			closest_point_probs[closest_point_probs == 0] = np.nan
-			likelihood += np.nansum(np.log(closest_point_probs))
+			for n in parameters:
+				#For each point in an instance, get the index of the closest point to it.
+				closest_points = calculate_closest_points(instance, n)
+				
+				closest_point_probs = self.closest_point_probs[n][np.where(closest_points != -1),[closest_points[closest_points!=-1]]]
+				closest_point_probs[closest_point_probs == 0] = np.nan
+				likelihood += np.nansum(np.log(closest_point_probs))
 		
 		#Categorical Naive Bayes on the number of arms above the head of a pose.
 		if "arms_above_head" in mode:
