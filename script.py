@@ -182,7 +182,7 @@ def select_modes_and_run():
 	8: "closest_points", 9: "arms_above_head", 10: "perpendicular_torso", 
 	11: "distance_between_points", 12: "key_angles"}
 	
-	print(modes)
+	print(modes, '\n')
 	
 	selected_modes = input("Enter the numbers separated by spaces: ")
 	selected_modes = list(map(int, selected_modes.split()))
@@ -191,4 +191,5 @@ def select_modes_and_run():
 	parameters = input("Enter parameters for closest points, or leave blank: ")
 	parameters = list(map(int, parameters.split()))
 	
+	print(selected_modes)
 	print(cross_validation(data, 5, selected_modes, parameters, True))
