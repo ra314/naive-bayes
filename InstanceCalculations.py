@@ -37,8 +37,8 @@ def calculate_height_and_width(instance, mode):
 	elif mode == "discretized_height_to_width_ratio":
 		return bin_height_to_width_ratio(height_and_width[0]/height_and_width[1])
 
-#Take an instance and return a list containing the closest point to every point, that is not nan.
-def calculate_closest_points(instance):
+#Take an instance and return a list containing the nth closest point to every point, that is not nan.
+def calculate_closest_points(instance, n):
 	points = get_coordinates(instance)
 	#Distances is a 2D array the contains the distances between all points.
 	distances = np.array([np.sqrt(np.sum((point - points)**2, axis=1)) for point in points])
@@ -46,7 +46,7 @@ def calculate_closest_points(instance):
 	#Set distance from the point to itself, and the distance for missing points as infinity.
 	distances[distances == 0] = np.infty
 	distances = np.nan_to_num(distances, nan=np.infty)
-	closest_points = np.argmin(distances, axis = 0)
+	closest_points = np.argsort(distances, axis = 0)[n]
 	closest_points_distances = np.min(distances, axis = 0)
 	closest_points[closest_points_distances == np.infty] = -1
 	return closest_points

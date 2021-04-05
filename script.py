@@ -55,7 +55,7 @@ def calculate_model_info(group, num_instances, mode):
 	if "closest_points" in mode:	
 		#Find the closest point of every point in the data frame. 
 		#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
-		closest_points = pd.DataFrame([calculate_closest_points(row[1]) for row in group.iterrows()])
+		closest_points = pd.DataFrame([calculate_closest_points(row[1], 0) for row in group.iterrows()])
 		#Then the probability of each point being the closest point for each body point is calculated for categorical Naive Bayes.
 		#Using Laplace add 1 smoothing.
 		pose.closest_point_probs = np.ones((11,12))
