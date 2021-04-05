@@ -50,7 +50,8 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		#Using add one laplace smoothing.
 		counts = discretized_height_to_width_ratios.value_counts()
 		pose.discretized_height_to_width_ratio_probs = np.zeros(3) + 1
-		pose.discretized_height_to_width_ratio_probs[list(map(lambda x: int(x[0]), counts.index))] += counts.values/len(discretized_height_to_width_ratios)
+		pose.discretized_height_to_width_ratio_probs[list(map(lambda x: int(x[0]), counts.index))] += counts.values
+		pose.discretized_height_to_width_ratio_probs /= len(discretized_height_to_width_ratios)
 	
 	if "closest_points" in mode:
 		pose.closest_point_probs = {}
@@ -89,6 +90,9 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		distances = pd.DataFrame(calculate_distance_between_points(row[1]) for row in group.iterrows())
 		pose.distance_means = distances.mean()
 		pose.distance_stdevs = distances.std()
+		
+	if "key_angles" in mode:
+		pass
 		
 	return pose
 
