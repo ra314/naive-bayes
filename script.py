@@ -52,7 +52,7 @@ def calculate_model_info(group, num_instances, mode, parameters):
 		counts = discretized_height_to_width_ratios.value_counts()
 		pose.discretized_height_to_width_ratio_probs = np.zeros(3) + 1
 		pose.discretized_height_to_width_ratio_probs[list(map(lambda x: int(x[0]), counts.index))] += counts.values
-		pose.discretized_height_to_width_ratio_probs /= discretized_height_to_width_ratios.count()
+		pose.discretized_height_to_width_ratio_probs /= discretized_height_to_width_ratios.count()[0]
 	
 	if "closest_points" in mode:
 		pose.closest_point_probs = {}
@@ -204,4 +204,4 @@ def select_modes_and_run():
 	parameters = list(map(int, parameters.split()))
 	
 	print('\n', selected_modes)
-	print(cross_validation(data, 5, selected_modes, parameters, False))
+	print(cross_validation(data, 5, selected_modes, parameters, True))
