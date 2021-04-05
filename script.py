@@ -189,15 +189,15 @@ def evaluate(predictions, test):
 	return 100*correct/len(predictions)
 	
 #Random hold out.
-def random_hold_out(data, hold_out_percent, mode, parameters):
+def random_hold_out(data, hold_out_percent, mode, parameters, speedup):
 	train_data = data.sample(frac = hold_out_percent, random_state = 3)
 	test_data = data.drop(train_data.index)
 	poses = train(train_data, mode)
-	predictions = predict(test_data, poses, mode, parameters, True)
+	predictions = predict(test_data, poses, mode, parameters, speedup)
 	print(evaluate(predictions, test_data))
 	
 #Cross validation.
-def cross_validation(data, num_partitions, mode, parameters):
+def cross_validation(data, num_partitions, mode, parameters, speedup):
 	#If num_paritions is set to -1, perform leave one out cross validation.
 	if num_partitions == -1:
 		num_partitions = len(data)
@@ -211,7 +211,7 @@ def cross_validation(data, num_partitions, mode, parameters):
 		test_data = data.loc[test_set_indexes]
 		train_data = data.drop(test_data.index)
 		poses = train(train_data, mode)
-		predictions = predict(test_data, poses, mode, parameters, True)
+		predictions = predict(test_data, poses, mode, parameters, speedup)
 		accuracy += evaluate(predictions, test_data)
 	return accuracy/num_partitions
 	
