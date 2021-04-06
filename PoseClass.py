@@ -105,7 +105,7 @@ class Pose:
 			if not np.isnan(discretized_height_to_width_ratio):
 				likelihood += log(self.discretized_height_to_width_ratio_probs[discretized_height_to_width_ratio])
 			
-		#Categorical Naive Bayes on the closest point of every point of a pose.
+		#Categorical Naive Bayes on a set of nth closest points of every point of a pose.
 		if "closest_points" in mode:
 			for n in parameters:
 				#For each point in an instance, get the index of the closest point to it.
