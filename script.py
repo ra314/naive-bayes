@@ -202,6 +202,8 @@ def select_modes_and_run():
 	
 	parameters = input("Enter parameters for closest points, or leave blank: ")
 	parameters = list(map(int, parameters.split()))
+
+	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
 	
 	print('\n', selected_modes)
-	print(cross_validation(data, 5, selected_modes, parameters, True))
+	print(cross_validation(data, 5, selected_modes, parameters, speedup))
