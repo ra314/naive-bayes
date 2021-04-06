@@ -8,10 +8,10 @@ def get_coordinates(instance):
 #Binning width to height ratio
 def bin_height_to_width_ratio(height_to_width_ratio):
 	#Tall
-	if (height_to_width_ratio<0.75):
+	if (height_to_width_ratio>4/3):
 		return 0
 	#Medium
-	elif (height_to_width_ratio<1.5):
+	elif (height_to_width_ratio>2/3):
 		return 1
 	#Wide
 	else:
@@ -34,9 +34,9 @@ def calculate_height_and_width(instance, mode):
 	if mode == "height_and_width":
 		return height_and_width
 	elif mode == "height_to_width_ratio":
-		return height_and_width[0]/height_and_width[1]
+		return height_and_width[1]/height_and_width[0]
 	elif mode == "discretized_height_to_width_ratio":
-		return bin_height_to_width_ratio(height_and_width[0]/height_and_width[1])
+		return bin_height_to_width_ratio(height_and_width[1]/height_and_width[0])
 
 #Take an instance and return a list containing the nth closest point to every point, that is not nan.
 def calculate_closest_points(instance, n):
