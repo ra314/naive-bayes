@@ -174,14 +174,15 @@ def cross_validation(data, num_partitions, mode, parameters, speedup):
 	
 #Graph displaying the accuracy of KDE at a variety of bandwidths.
 #The function returns the bandwidth that maximised accuracy.
-def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step):
+def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step, speedup):
 	accuracies = []
 	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
 	for bandwidth in bandwidths:
 		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth], speedup)
 		accuracies.append(accuracy)
+		print(f"Bandwidth being tested: {bandwidth}")
 	
-	plt.plot(accuracies)
+	plt.plot(bandwidths, accuracies, '-o')
 	plt.show()
 	
 	return bandwidths[np.argmax(accuracies)]
