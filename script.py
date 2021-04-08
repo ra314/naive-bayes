@@ -183,7 +183,7 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step,
 		print(f"Bandwidth being tested: {bandwidth}")
 	
 	plt.plot(bandwidths, accuracies, '-o')
-	plt.title('Bandwidth accuracy comparison')
+	plt.title('Accuracy vs Bandwidth')
 	plt.xlabel('Bandwidth value')
 	plt.ylabel('% Accuracy')
 	colours = ['0.7', '0.5']*(int((max_bandwidth - min_bandwidth + 1)/(2*step)))
