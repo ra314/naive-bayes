@@ -178,7 +178,7 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step)
 	accuracies = []
 	bandwidths = np.arange(min_bandwidth, max_bandwidth+step, step)
 	for bandwidth in bandwidths:
-		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth])
+		accuracy = cross_validation(data, num_partitions, "KDE", [bandwidth], speedup)
 		accuracies.append(accuracy)
 	
 	plt.plot(accuracies)
