@@ -186,7 +186,7 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step,
 	plt.title('Accuracy vs Bandwidth')
 	plt.xlabel('Bandwidth value')
 	plt.ylabel('% Accuracy')
-	colours = ['0.7', '0.5']*(int((max_bandwidth - min_bandwidth + 1)/(2*step)))
+	colours = ['0.7', '0.5']*(int((max_bandwidth - min_bandwidth + step)/(2*step)))
 	if (max_bandwidth - min_bandwidth + 1)%2:
 		colours.append('0.7')
 	plt.vlines(bandwidths, min(accuracies) - 1, accuracies, linestyles = 'dashed', color = colours)
