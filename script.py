@@ -225,6 +225,7 @@ def test_predictions_comparison(LoLmodes, LoLparameters, speedup):
 		poses = train(data, LoLmodes[i], LoLparameters[i])
 		pred = predict(test, poses, LoLmodes[i], LoLparameters[i], speedup)
 		predictions[i+1] = (pred == test[0])
+		predictions[i+1+len(LoLmodes)] = pred
 		accuracies.append(evaluate(pred, test))
 	print(f"Accuracies: {accuracies}")
 	predictions.to_csv('predict_comparison.csv')
