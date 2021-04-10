@@ -215,3 +215,16 @@ def select_modes_and_run():
 	
 	print('\n', selected_modes)
 	print(cross_validation(data, 5, selected_modes, parameters, speedup))
+
+def test_predictions_comparison(LoLmodes, LoLparameters, speedup):
+	data = preprocess('train.csv')
+	test = preprocess('test.csv')
+	predictions = pd.DataFrame(test[0])
+	accuracies = []
+	for i in range(len(LoLmodes)):
+		poses = train(data, LoLmodes[i], LoLparameters[i])
+		pred = predict(test, poses, LoLmodes[i], LoLparameters[i], speedup)
+		predictions[i+1] = (pred == test[0])
+		accuracies.append(evaluate(pred, test))
+	print(f"Accuracies: {accuracies}")
+	predictions.to_csv('predict_comparison.csv')
