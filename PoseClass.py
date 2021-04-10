@@ -57,6 +57,7 @@ class Pose:
 		#Gaussian Naive Bayes on coordinates of a pose.
 		if "classic" in mode:
 			likelihood += self.log_pdf_sum(instance, self.coordinate_means, self.coordinate_stdevs)
+			print(f"classic weight: {self.log_pdf_sum(instance, self.coordinate_means, self.coordinate_stdevs)}")
 		
 		#KDE Naive Bayes on coordinates of a pose.
 		if "KDE" in mode:
@@ -79,6 +80,7 @@ class Pose:
 			absence_probs = self.absence_probs[coordinates_absent]
 			absence_probs[absence_probs == 0] = np.nan
 			likelihood += np.nansum(np.log(absence_probs))
+			print(f"absence weight: {np.nansum(np.log(absence_probs))}")
 		
 		#Categorical Naive Bayes on the presence of the coordiantes of a pose.
 		if "coordinate_presence" in mode:			

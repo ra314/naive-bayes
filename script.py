@@ -208,7 +208,7 @@ def select_modes_and_run():
 	selected_modes = list(map(int, selected_modes.split()))
 	selected_modes = [modes[mode] for mode in selected_modes]
 	
-	parameters = input("Enter parameters for closest points, or leave blank: ")
+	parameters = input("Enter parameters for closest points or KDE (both cannot be used at the same time), or leave blank: ")
 	parameters = list(map(int, parameters.split()))
 
 	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))

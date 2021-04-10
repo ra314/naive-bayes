@@ -72,3 +72,10 @@ poses = train(data, "perpendicular_torso")
 for pose in poses:
 	print(pose.name)
 	print(pose.perpendicular_torso_probs)
+	
+Commands for figures 2, 3,4,5
+optimize_bandwidth(data, 5, 5, 25, 0.5, True)
+optimize_bandwidth(data, 10, 6, 10, 0.1, True)
+optimize_bandwidth(data, -1, 6, 10, 0.1, True)
+optimize_bandwidth(data, -1, 5, 25, 0.5, True)
+optimize_bandwidth(data, -1, 5.5, 6.5, 0.1, True)
