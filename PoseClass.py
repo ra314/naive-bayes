@@ -68,7 +68,7 @@ class Pose:
 	
 	#Funtion to pick between returning integrated probability and likelihood	
 	def log_norm_sum(self, instance, means, stdevs, mode, parameters):
-		if "intergration" in mode:
+		if "integration" in mode:
 			return self.log_norm_prob_sum(instance, means, stdevs, parameters['epsilon'])
 		else:
 			return self.log_norm_pdf_sum(instance, means, stdevs)
