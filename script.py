@@ -213,7 +213,7 @@ def select_modes_and_params():
 	epsilon_param = input("Enter parameters for epsilon when integrating, or leave blank: ")
 	
 	if KDE_param: parameters['KDE'] = int(KDE_param)
-	if closest_points_param: parameters['closest_points'] = list(map(int, closest_point_param.split()))
+	if closest_points_param: parameters['closest_points'] = list(map(int, closest_points_param.split()))
 	if epsilon_param: parameters['epsilon'] = int(epsilon_param)
 	
 	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
