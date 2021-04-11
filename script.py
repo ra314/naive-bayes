@@ -219,16 +219,25 @@ def select_modes_and_crossvalidate():
 	print(cross_validation(data, 5, selected_modes, parameters, speedup))
 
 def predictions_comparison(ground_truth, predictions1, predictions2):
-	predictions1 = pd.DataFrame(predictions1)
-	predictions2 = pd.DataFrame(predictions2)
-	ground_truth = pd.DataFrame(ground_truth)
+	predictions1 = pd.Series(predictions1)
+	predictions2 = pd.Series(predictions2)
+	ground_truth = pd.Series(ground_truth)
 	
-	predictions_both_got_right = ((ground_truth == predictions1) & (ground_truth == predictions2)).sum()[0]
-	predictions_both_got_wrong = ((ground_truth != predictions1) & (ground_truth != predictions2)).sum()[0]
-	predictions_different = (predictions1 != predictions2).sum()[0]
-	print(f"Both right: {predictions_both_got_right}, Both wrong: {predictions_both_got_wrong}")
-	print(f"Different predictions: {predictions_different}, Total size: {len(ground_truth)}")
+	predictions_both_got_right = ((ground_truth == predictions1) & (ground_truth == predictions2))
+	predictions_both_got_wrong = ((ground_truth != predictions1) & (ground_truth != predictions2))
+	predictions_different = (predictions1 != predictions2)
 	
+	predictions1_different_and_right = predictions1.loc[predictions_different] == ground_truth.loc[predictions_different]
+	predictions1_different_and_wrong = predictions1.loc[predictions_different] != ground_truth.loc[predictions_different]
+	predictions2_different_and_right = predictions2.loc[predictions_different] == ground_truth.loc[predictions_different]
+	predictions2_different_and_wrong = predictions2.loc[predictions_different] != ground_truth.loc[predictions_different]
+	
+	print(f"Both right: {predictions_both_got_right.sum()}, Both wrong: {predictions_both_got_wrong.sum()}")
+	print(f"Different predictions: {predictions_different.sum()}, Total size: {len(ground_truth)}")
+	print(f"Of the different predictions, the first set of predictions had {predictions1_different_and_right.sum()} correct and {predictions1_different_and_wrong.sum()} wrong")
+	print(f"Of the different predictions, the second set of predictions had {predictions2_different_and_right.sum()} correct and {predictions2_different_and_wrong.sum()} wrong")
+	
+
 def compare_predictions_between_modes():
 	data = preprocess('train.csv')
 	test = preprocess('test.csv')
@@ -243,4 +252,5 @@ def compare_predictions_between_modes():
 	poses = train(data, modes, parameters)
 	predictions2 = predict(test, poses, modes, parameters, speedup)
 	
+	print()
 	predictions_comparison(test[0], predictions1, predictions2)
