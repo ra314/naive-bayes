@@ -42,7 +42,7 @@ class Pose:
 		self.discretized_angle_probs = []
 		
 	def __str__(self):
-		return f"Name: {self.name}, Prior: {self.prior}, Absence Probs: {self.absence_probs}"
+		return f"Name: {self.name}, Prior: {self.prior}"
 		
 	#Calculates the pdfs for a vector of means, stdevs and x values.
 	#Then logs the pdfs and returns the sum.
