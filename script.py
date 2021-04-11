@@ -195,38 +195,52 @@ def optimize_bandwidth(data, num_partitions, min_bandwidth, max_bandwidth, step,
 	return bandwidths[np.argmax(accuracies)]
 	
 #Function that simplifies modes for cross validation
-def select_modes_and_run():
-	data = preprocess('train.csv')
+def select_modes_and_params():
 	modes = {0: "NULL", 1: "classic", 2: "KDE", 3: "coordinate_absence", 4: "coordinate_presence", 
 	5: "height_and_width", 6: "height_to_width_ratio", 7: "discretized_height_to_width_ratio",
 	8: "closest_points", 9: "arms_above_head", 10: "perpendicular_torso", 
-	11: "distance_between_points", 12: "key_angles", 13: "discretized_key_angles"}
-	
+	11: "distance_between_points", 12: "key_angles", 13: "discretized_key_angles"}	
 	print(modes, '\n')
-	
+
 	selected_modes = input("Enter the numbers separated by spaces: ")
 	selected_modes = list(map(int, selected_modes.split()))
 	selected_modes = [modes[mode] for mode in selected_modes]
 	
 	parameters = input("Enter parameters for closest points or KDE (both cannot be used at the same time), or leave blank: ")
 	parameters = list(map(int, parameters.split()))
-
 	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
 	
+	return selected_modes, parameters, speedup
+		
+def select_modes_and_crossvalidate():
+	data = preprocess('train.csv')
+	selected_modes, parameters, speedup = select_modes_and_params()	
 	print('\n', selected_modes)
 	print(cross_validation(data, 5, selected_modes, parameters, speedup))
 
-def test_predictions_comparison(LoLmodes, LoLparameters, speedup):
+def predictions_comparison(ground_truth, predictions1, predictions2):
+	predictions1 = pd.DataFrame(predictions1)
+	predictions2 = pd.DataFrame(predictions2)
+	ground_truth = pd.DataFrame(ground_truth)
+	
+	predictions_both_got_right = ((ground_truth == predictions1) & (ground_truth == predictions2)).sum()[0]
+	predictions_both_got_wrong = ((ground_truth != predictions1) & (ground_truth != predictions2)).sum()[0]
+	predictions_different = (predictions1 != predictions2).sum()[0]
+	print(f"Both right: {predictions_both_got_right}, Both wrong: {predictions_both_got_wrong}")
+	print(f"Different predictions: {predictions_different}, Total size: {len(ground_truth)}")
+	
+def compare_predictions_between_modes():
 	data = preprocess('train.csv')
 	test = preprocess('test.csv')
-	predictions = pd.DataFrame(test[0])
-	accuracies = []
-	for i in range(len(LoLmodes)):
-		poses = train(data, LoLmodes[i], LoLparameters[i])
-		pred = predict(test, poses, LoLmodes[i], LoLparameters[i], speedup)
-		predictions[i+1] = (pred == test[0])
-		predictions[i+2] = pred
-		accuracies.append(evaluate(pred, test))
-		print(f"Correct: {sum(predictions[i+1] == True)}, Incorrect: {sum(predictions[i+1] == False)}")
-	print(f"Accuracies: {accuracies}")
-	predictions.to_csv('predict_comparison.csv')
+	
+	print("Select the arguments for the first set of predictions")
+	modes, parameters, speedup = select_modes_and_params()
+	poses = train(data, modes, parameters)
+	predictions1 = predict(test, poses, modes, parameters, speedup)
+	
+	print("\n Select the arguments for the second set of predictions")
+	modes, parameters, speedup = select_modes_and_params()
+	poses = train(data, modes, parameters)
+	predictions2 = predict(test, poses, modes, parameters, speedup)
+	
+	predictions_comparison(test[0], predictions1, predictions2)
