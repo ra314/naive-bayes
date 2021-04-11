@@ -214,7 +214,7 @@ def select_modes_and_params():
 	
 	if KDE_param: parameters['KDE'] = int(KDE_param)
 	if closest_points_param: parameters['closest_points'] = list(map(int, closest_points_param.split()))
-	if epsilon_param: parameters['epsilon'] = int(epsilon_param)
+	if epsilon_param: parameters['epsilon'] = float(epsilon_param)
 	
 	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
 	
@@ -224,6 +224,7 @@ def select_modes_and_crossvalidate():
 	data = preprocess('train.csv')
 	selected_modes, parameters, speedup = select_modes_and_params()	
 	print('\n', selected_modes)
+	num_partitions = input("Select number of partitions for cross validation: ")
 	print(cross_validation(data, 5, selected_modes, parameters, speedup))
 
 def predictions_comparison(ground_truth, predictions1, predictions2):

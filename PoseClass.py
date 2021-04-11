@@ -63,8 +63,8 @@ class Pose:
 		for value, mean, stdev in zip(instance, means, stdevs):
 			if not(np.isnan(value)):
 				prob, err = quad(self.norm_pdf, value-epsilon, value+epsilon, args=(mean, stdev))
-				total_prob += log(prob) if prob!=0 else 0
-		return total_prob if total_prob!=0 else 0
+				if prob!=0 and not np.isnan(prob): total_prob += log(prob)
+		return total_prob
 	
 	#Funtion to pick between returning integrated probability and likelihood	
 	def log_norm_sum(self, instance, means, stdevs, mode, parameters):
