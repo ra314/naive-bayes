@@ -58,19 +58,18 @@ class Pose:
 	#Calculates the probs for a vector of means, stdevs and x values.
 	#Does it by integrating a small area around the point
 	#Then logs the probs and returns the sum.
-	def log_norm_prob_sum(self, instance, means, stdevs):
+	def log_norm_prob_sum(self, instance, means, stdevs, epsilon):
 		total_prob = 0
 		for value, mean, stdev in zip(instance, means, stdevs):
 			if not(np.isnan(value)):
-				epsilon = 0.1
 				prob, err = quad(self.norm_pdf, value-epsilon, value+epsilon, args=(mean, stdev))
 				total_prob += log(prob) if prob!=0 else 0
 		return total_prob if total_prob!=0 else 0
 	
 	#Funtion to pick between returning integrated probability and likelihood	
-	def log_norm_sum(self, instance, means, stdevs, mode):
+	def log_norm_sum(self, instance, means, stdevs, mode, parameters):
 		if "intergration" in mode:
-			return self.log_norm_prob_sum(instance, self.coordinate_means, self.coordinate_stdevs)
+			return self.log_norm_prob_sum(instance, self.coordinate_means, self.coordinate_stdevs, parameters['epsilon'])
 		else:
 			return self.log_norm_pdf_sum(instance, self.coordinate_means, self.coordinate_stdevs)
 	
@@ -80,7 +79,7 @@ class Pose:
 		
 		#Gaussian Naive Bayes on coordinates of a pose.
 		if "classic" in mode:
-			likelihood += self.log_norm_sum(instance, self.coordinate_means, self.coordinate_stdevs, mode)
+			likelihood += self.log_norm_sum(instance, self.coordinate_means, self.coordinate_stdevs, mode, parameters)
 		
 		#KDE Naive Bayes on coordinates of a pose.
 		if "KDE" in mode:
@@ -89,7 +88,7 @@ class Pose:
 			#as the centre of a normal distribution with standard deviation = bandwidth.
 			#For any given instance there will be 22*(len(self.data)) pdfs calculated.
 			#These pdfs are then summed for each attribute. 
-			bandwidth = parameters[0]
+			bandwidth = parameters['KDE']
 			pdfs = (1/(bandwidth*sqrt(2*pi))) * np.exp(-0.5*(((self.data - instance)/bandwidth)**2))
 			sum_pdfs = np.nansum(pdfs, axis = 0)/len(self.data)
 			sum_pdfs[sum_pdfs == 0] = np.nan
@@ -116,12 +115,12 @@ class Pose:
 		#Gaussian Naive Bayes on the height and width of a pose.
 		if "height_and_width" in mode:
 			height_and_width = calculate_height_and_width(instance, "height_and_width")
-			likelihood += self.log_norm_sum(height_and_width, self.height_and_width_means, self.height_and_width_stdevs, mode)
+			likelihood += self.log_norm_sum(height_and_width, self.height_and_width_means, self.height_and_width_stdevs, mode, parameters)
 		
 		#Gaussian Naive Bayes on the height to width ratio of a pose.
 		if "height_to_width_ratio" in mode:
 			height_to_width_ratio = calculate_height_and_width(instance, "height_to_width_ratio")
-			likelihood += self.log_norm_sum(height_to_width_ratio, self.height_to_width_ratio_means, self.height_to_width_ratio_stdevs, mode)
+			likelihood += self.log_norm_sum(height_to_width_ratio, self.height_to_width_ratio_means, self.height_to_width_ratio_stdevs, mode, parameters)
 			
 		#Categorical Naive Bayes on the discretized height to width ratio of a pose.
 		if "discretized_height_to_width_ratio" in mode:
@@ -131,7 +130,7 @@ class Pose:
 			
 		#Categorical Naive Bayes on a set of nth closest points of every point of a pose.
 		if "closest_points" in mode:
-			for n in parameters:
+			for n in parameters['closest_points']:
 				#For each point in an instance, get the index of the closest point to it.
 				closest_points = calculate_closest_points(instance, n)
 				
@@ -154,12 +153,12 @@ class Pose:
 		#Gaussian Naive Bayes on the distance between points
 		if "distance_between_points" in mode:
 			distances = calculate_distance_between_points(instance)
-			likelihood += self.log_norm_sum(distances, self.distance_means, self.distance_stdevs, mode)
+			likelihood += self.log_norm_sum(distances, self.distance_means, self.distance_stdevs, mode, parameters)
 			
 		#Gaussian Naive Bayes on key angles between points.
 		if "key_angles" in mode:
 			angles = calculate_key_angles(instance)
-			likelihood += self.log_norm_sum(angles, self.angle_means, self.angle_stdevs, mode)
+			likelihood += self.log_norm_sum(angles, self.angle_means, self.angle_stdevs, mode, parameters)
 				
 		#Categorical Naive Bayes on key angles between points.
 		if "discretized_key_angles" in mode:

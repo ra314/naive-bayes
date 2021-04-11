@@ -56,7 +56,7 @@ def calculate_model_info(group, num_instances, mode, parameters):
 	
 	if "closest_points" in mode:
 		pose.closest_point_probs = {}
-		for n in parameters:
+		for n in parameters['closest_points']:
 			#Find the closest point of every point in the data frame. 
 			#The input is a (len(group)x22) data frame. The output is a (len(group)x11) data frame.
 			closest_points = pd.DataFrame([calculate_closest_points(row[1], n) for row in group.iterrows()])
@@ -206,8 +206,16 @@ def select_modes_and_params():
 	selected_modes = list(map(int, selected_modes.split()))
 	selected_modes = [modes[mode] for mode in selected_modes]
 	
-	parameters = input("Enter parameters for closest points or KDE (both cannot be used at the same time), or leave blank: ")
-	parameters = list(map(int, parameters.split()))
+	parameters = {}
+	
+	KDE_param =  input("Enter parameters for KDE, or leave blank: ")
+	closest_points_param = input("Enter parameters for closest points, or leave blank: ")
+	epsilon_param = input("Enter parameters for epsilon when integrating, or leave blank: ")
+	
+	if KDE_param: parameters['KDE'] = int(KDE_param)
+	if closest_points_param: parameters['closest_points'] = list(map(int, closest_point_param.split()))
+	if epsilon_param: parameters['epsilon'] = int(epsilon_param)
+	
 	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
 	
 	return selected_modes, parameters, speedup
