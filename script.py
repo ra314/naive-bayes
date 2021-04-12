@@ -229,14 +229,14 @@ def select_modes_and_crossvalidate():
 	print(cross_validation(data, 5, selected_modes, parameters, speedup))
 
 def predictions_comparison(ground_truth, predictions1, predictions2):
+	ground_truth = pd.Series(ground_truth)
 	predictions1 = pd.Series(predictions1)
 	predictions2 = pd.Series(predictions2)
-	ground_truth = pd.Series(ground_truth)
-	
+
 	predictions_both_got_right = ((ground_truth == predictions1) & (ground_truth == predictions2))
 	predictions_both_got_wrong = ((ground_truth != predictions1) & (ground_truth != predictions2))
 	predictions_different = (predictions1 != predictions2)
-	
+
 	predictions1_different_and_right = predictions1.loc[predictions_different] == ground_truth.loc[predictions_different]
 	predictions1_different_and_wrong = predictions1.loc[predictions_different] != ground_truth.loc[predictions_different]
 	predictions2_different_and_right = predictions2.loc[predictions_different] == ground_truth.loc[predictions_different]
@@ -246,6 +246,11 @@ def predictions_comparison(ground_truth, predictions1, predictions2):
 	print(f"Different predictions: {predictions_different.sum()}, Total size: {len(ground_truth)}")
 	print(f"Of the different predictions, the first set of predictions had {predictions1_different_and_right.sum()} correct and {predictions1_different_and_wrong.sum()} wrong")
 	print(f"Of the different predictions, the second set of predictions had {predictions2_different_and_right.sum()} correct and {predictions2_different_and_wrong.sum()} wrong")
+	
+	indices = predictions_different[predictions_different].index
+	print(f"\nBelow are the predictions that were different. Truth left, set 1 middle, set 2 right.")
+	for pair in sorted(zip(ground_truth.loc[indices], predictions1.loc[indices], predictions2.loc[indices])):
+		print(pair)
 
 def get_predictions():
 	data = preprocess('train.csv')
