@@ -273,6 +273,12 @@ def compare_predictions_between_modes():
 	print()
 	predictions_comparison(test[0], predictions1, predictions2)
 	
+def plot_cm(cm, labels):
+	df_cm = pd.DataFrame(cm, labels, labels)
+	sn.heatmap(df_cm, annot=True)
+	plt.title("Confusion Matrix")
+	plt.show()
+	
 def confusion_matrix(ground_truth, predictions, mode):
 	labels = sorted(list(set(ground_truth)))
 	cm = metrics.confusion_matrix(ground_truth, predictions, labels = labels)
@@ -280,8 +286,13 @@ def confusion_matrix(ground_truth, predictions, mode):
 	if mode == "errors_only":
 		for i in range(len(cm)):
 			cm[i][i] = 0
+			
+	plot_cm(cm, labels)
 	
-	df_cm = pd.DataFrame(cm, labels, labels)
-	sn.heatmap(df_cm, annot=True)
-	plt.title("Confusion Matrix")
-	plt.show()
+def confusion_matrix_difference(ground_truth, predictions1, predictions2):
+	labels = sorted(list(set(ground_truth)))
+	cm1 = metrics.confusion_matrix(ground_truth, predictions1, labels = labels)
+	cm2 = metrics.confusion_matrix(ground_truth, predictions2, labels = labels)
+	
+	cm = np.array(cm1) - np.array(cm2)
+	plot_cm(cm, labels)
