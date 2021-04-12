@@ -246,11 +246,6 @@ def predictions_comparison(ground_truth, predictions1, predictions2):
 	print(f"Different predictions: {predictions_different.sum()}, Total size: {len(ground_truth)}")
 	print(f"Of the different predictions, the first set of predictions had {predictions1_different_and_right.sum()} correct and {predictions1_different_and_wrong.sum()} wrong")
 	print(f"Of the different predictions, the second set of predictions had {predictions2_different_and_right.sum()} correct and {predictions2_different_and_wrong.sum()} wrong")
-	
-	indices = predictions_different[predictions_different].index
-	print(f"\nBelow are the predictions that were different. Truth left, set 1 middle, set 2 right.")
-	for pair in sorted(zip(ground_truth.loc[indices], predictions1.loc[indices], predictions2.loc[indices])):
-		print(pair)
 
 def get_predictions():
 	data = preprocess('train.csv')
@@ -273,26 +268,12 @@ def compare_predictions_between_modes():
 	print()
 	predictions_comparison(test[0], predictions1, predictions2)
 	
-def plot_cm(cm, labels):
+def confusion_matrix(ground_truth, predictions):
+	labels = sorted(list(set(ground_truth)))
+	cm = metrics.confusion_matrix(ground_truth, predictions, labels = labels)
+
 	df_cm = pd.DataFrame(cm, labels, labels)
+	df_cm = df_cm[:].replace(0, np.nan)
 	sn.heatmap(df_cm, annot=True)
 	plt.title("Confusion Matrix")
 	plt.show()
-	
-def confusion_matrix(ground_truth, predictions, mode):
-	labels = sorted(list(set(ground_truth)))
-	cm = metrics.confusion_matrix(ground_truth, predictions, labels = labels)
-	
-	if mode == "errors_only":
-		for i in range(len(cm)):
-			cm[i][i] = 0
-			
-	plot_cm(cm, labels)
-	
-def confusion_matrix_difference(ground_truth, predictions1, predictions2):
-	labels = sorted(list(set(ground_truth)))
-	cm1 = metrics.confusion_matrix(ground_truth, predictions1, labels = labels)
-	cm2 = metrics.confusion_matrix(ground_truth, predictions2, labels = labels)
-	
-	cm = np.array(cm1) - np.array(cm2)
-	plot_cm(cm, labels)
