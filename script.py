@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool
+from sklearn import metrics
+import seaborn as sn
+import matplotlib.pyplot as plt
 
 from PoseClass import Pose
 from InstanceCalculations import calculate_height_and_width, calculate_closest_points, calculate_num_arms_above_head, calculate_perpendicular_torso, calculate_distance_between_points, calculate_key_angles
@@ -206,17 +209,15 @@ def select_modes_and_params():
 	selected_modes = list(map(int, selected_modes.split()))
 	selected_modes = [modes[mode] for mode in selected_modes]
 	
-	parameters = {}
-	
 	KDE_param =  input("Enter parameters for KDE, or leave blank: ")
 	closest_points_param = input("Enter parameters for closest points, or leave blank: ")
 	epsilon_param = input("Enter parameters for epsilon when integrating, or leave blank: ")
+	speedup = input("Speedup? Leave blank for no, 1 for Yes: ")
 	
+	parameters = {}
 	if KDE_param: parameters['KDE'] = int(KDE_param)
 	if closest_points_param: parameters['closest_points'] = list(map(int, closest_points_param.split()))
 	if epsilon_param: parameters['epsilon'] = float(epsilon_param)
-	
-	speedup = int(input("Speedup? 0 for No , 1 for Yes: "))
 	
 	return selected_modes, parameters, speedup
 		
@@ -245,21 +246,32 @@ def predictions_comparison(ground_truth, predictions1, predictions2):
 	print(f"Different predictions: {predictions_different.sum()}, Total size: {len(ground_truth)}")
 	print(f"Of the different predictions, the first set of predictions had {predictions1_different_and_right.sum()} correct and {predictions1_different_and_wrong.sum()} wrong")
 	print(f"Of the different predictions, the second set of predictions had {predictions2_different_and_right.sum()} correct and {predictions2_different_and_wrong.sum()} wrong")
+
+def get_predictions():
+	data = preprocess('train.csv')
+	test = preprocess('test.csv')
 	
+	modes, parameters, speedup = select_modes_and_params()
+	poses = train(data, modes, parameters)
+	return predict(test, poses, modes, parameters, speedup)
 
 def compare_predictions_between_modes():
 	data = preprocess('train.csv')
 	test = preprocess('test.csv')
 	
 	print("Select the arguments for the first set of predictions")
-	modes, parameters, speedup = select_modes_and_params()
-	poses = train(data, modes, parameters)
-	predictions1 = predict(test, poses, modes, parameters, speedup)
+	predictions1 = get_predictions()
 	
 	print("\n Select the arguments for the second set of predictions")
-	modes, parameters, speedup = select_modes_and_params()
-	poses = train(data, modes, parameters)
-	predictions2 = predict(test, poses, modes, parameters, speedup)
+	predictions2 = get_predictions()
 	
 	print()
 	predictions_comparison(test[0], predictions1, predictions2)
+	
+def confusion_matrix(ground_truth, predictions):
+	labels = sorted(list(set(ground_truth)))
+	cm = metrics.confusion_matrix(ground_truth, predictions, labels = labels)
+	df_cm = pd.DataFrame(cm, labels, labels)
+	sn.heatmap(df_cm, annot=True)
+	plt.title("Confusion Matrix")
+	plt.show()
