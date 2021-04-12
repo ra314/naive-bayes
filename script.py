@@ -268,9 +268,14 @@ def compare_predictions_between_modes():
 	print()
 	predictions_comparison(test[0], predictions1, predictions2)
 	
-def confusion_matrix(ground_truth, predictions):
+def confusion_matrix(ground_truth, predictions, mode):
 	labels = sorted(list(set(ground_truth)))
 	cm = metrics.confusion_matrix(ground_truth, predictions, labels = labels)
+	
+	if mode == "errors_only":
+		for i in range(len(cm)):
+			cm[i][i] = 0
+	
 	df_cm = pd.DataFrame(cm, labels, labels)
 	sn.heatmap(df_cm, annot=True)
 	plt.title("Confusion Matrix")
